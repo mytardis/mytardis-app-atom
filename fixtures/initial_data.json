@@ -1,0 +1,22 @@
+{
+    {
+        "pk": null,
+        "model": "tardis_portal.schema",
+        "fields": {
+            "type": 2,
+            "namespace": "http://mytardis.org/schemas/atom-import#dataset",
+            "name": "Atom Import - Dataset",
+            "subtype": "atom-import-dataset"
+        }
+    },
+    {
+        "pk": null,
+        "model": "tardis_portal.schema",
+        "fields": {
+            "type": 3,
+            "namespace": "http://mytardis.org/schemas/atom-import#datafile",
+            "name": "Atom Import - Datafile",
+            "subtype": "atom-import-datafile"
+        }
+    }
+}
