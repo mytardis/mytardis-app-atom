@@ -1,4 +1,4 @@
-{
+[
     {
         "pk": null,
         "model": "tardis_portal.schema",
@@ -19,4 +19,4 @@
             "subtype": "atom-import-datafile"
         }
     }
-}
+]
