@@ -1,0 +1,35 @@
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>http://localhost:4272/datasets2.atom</id>
+  <title>Data grabber data set feed</title>
+  <link rel="self" href="http://localhost:4272/datasets2.atom"/>
+  <link rel="prev" href="http://localhost:4272/datasets.atom"/>
+  <updated>2011-12-19T13:02:02+10:00</updated>
+  <entry>
+    <id>urn:uuid:4123a90e-a479-463a-8a94-951a5e1940ec</id>
+    <author>
+      <name>John Doe</name>
+      <email>j.doe@example.test</email>
+    </author>
+    <title>jdoe image abcd0002</title>
+    <content/>
+    <link rel="enclosure"
+          href="http://mydatagrabber.cmm.uq.edu.au/files/foo0002.tif"/>
+    <link rel="enclosure"
+          href="http://mydatagrabber.cmm.uq.edu.au/files/foo0002.txt"/>
+    <updated>2011-12-19T13:02:00+10:00</updated>
+  </entry>
+  <entry>
+    <id>urn:uuid:c6bc854a-751c-44a2-8cef-727658ca1189</id>
+    <author>
+      <name>John Doe</name>
+      <email>j.doe@example.test</email>
+    </author>
+    <title>jdoe image abcd0001</title>
+    <content/>
+    <link rel="enclosure"
+          href="http://mydatagrabber.cmm.uq.edu.au/files/foo0001.tif"/>
+    <link rel="enclosure"
+          href="http://mydatagrabber.cmm.uq.edu.au/files/foo0001.txt"/>
+    <updated>2011-12-19T13:01:00+10:00</updated>
+  </entry>
+</feed>

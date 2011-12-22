@@ -1,8 +1,10 @@
 from django.test import TestCase
 from tardis.tardis_portal.models import Dataset, Schema
-from tardis.apps.atomimport.atom_ingest import AtomParser, AtomImportSchemas
+from tardis.apps.atomimport.atom_ingest import AtomWalker, AtomImportSchemas
 from flexmock import flexmock, flexmock_teardown
-import os, inspect
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+import BaseHTTPServer, os, inspect, SocketServer, threading
+
 
 class SchemaTestCase(TestCase):
 
@@ -19,15 +21,58 @@ class SchemaTestCase(TestCase):
 
 class ProcessorTestCase(TestCase):
 
-    def testParserReadsAtom(self):
-        f = open(os.path.dirname(__file__)+'/atom_test/datasets.atom')
-        atom_doc = f.read()
-        parser = AtomParser(atom_doc)
-        assert inspect.ismethod(parser.get_datasets)
-        datasets = parser.get_datasets()
-        assert isinstance(datasets, list)
-        assert len(datasets) == 2
-        for dataset in datasets:
+    class TestWebServer:
+        '''
+        Utility class for running a test web server with a given handler.
+        '''
+
+        class ThreadedTCPServer(SocketServer.ThreadingMixIn, \
+                                BaseHTTPServer.HTTPServer):
+            pass
+
+        def __init__(self):
+            self.handler = SimpleHTTPRequestHandler
+
+        def start(self):
+            server = self.ThreadedTCPServer(('127.0.0.1', self.getPort()),
+                                            self.handler)
+            server_thread = threading.Thread(target=server.serve_forever)
+            server_thread.daemon = True
+            server_thread.start()
+            self.server = server
+            return server.socket.getsockname()
+
+        def getUrl(self):
+            return 'http://%s:%d/' % self.server.socket.getsockname()
+
+        @classmethod
+        def getPort(cls):
+            return 4272
+
+        def stop(self):
+            self.server.shutdown()
+
+
+    def setUp(self):
+        self.priorcwd = os.getcwd()
+        os.chdir(os.path.dirname(__file__)+'/atom_test')
+        self.server = self.TestWebServer()
+        self.server.start()
+        pass
+
+    def tearDown(self):
+        os.chdir(self.priorcwd)
+        self.server.stop()
+        flexmock_teardown()
+
+    def testWalkerFollowsAtomLinks(self):
+        parser = AtomWalker('http://localhost:%d/datasets.atom' %
+                            (self.TestWebServer.getPort()))
+        assert inspect.ismethod(parser.datasets)
+        print parser.datasets()
+        num_datasets = reduce(lambda a,b: a+1, parser.datasets(), 0)
+        assert num_datasets == 4
+        for dataset in parser.datasets():
             assert isinstance(dataset, Dataset)
             #datafiles = parser.get_datafiles(dataset)
             #assert isinstance(datafiles, list)

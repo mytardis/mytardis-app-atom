@@ -9,14 +9,28 @@ class AtomImportSchemas:
     def get_schemas(cls):
         return Schema.objects.filter(namespace__startswith=cls.BASE_NAMESPACE)
 
-class AtomParser:
+class AtomWalker:
 
-    def __init__(self,doc):
-        self.doc = doc
+    def __init__(self,root_doc):
+        self.root_doc = root_doc
 
-    def get_datasets(self):
-        d = feedparser.parse(self.doc)
-        datasets = map(self._entry_processor, d.entries)
+    @staticmethod
+    def _get_next_href(doc):
+        links = filter(lambda x: x.rel == 'next', doc.feed.links)
+        if len(links) < 1:
+            return None
+        return links[0].href
+
+    def datasets(self):
+        doc = feedparser.parse(self.root_doc)
+        datasets = []
+        while True:
+            datasets.extend(map(self._entry_processor, doc.entries))
+            next = self._get_next_href(doc)
+            print next
+            if next == None:
+                break
+            doc = feedparser.parse(next)
         return datasets
 
     def _entry_processor(self, entry):

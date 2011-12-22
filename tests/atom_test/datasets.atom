@@ -1,26 +1,17 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <id>http://mydatagrabber.cmm.uq.edu.au/datasets</id>
+  <id>http://localhost:4272/datasets.atom</id>
   <title>Data grabber data set feed</title>
-  <link rel="self" href="http://mydatagrabber.cmm.uq.edu.au/datasets"/>
-  <link rel="next" href="http://mydatagrabber.cmm.uq.edu.au/datasets?page=2"/>
+  <link rel="self" href="http://localhost:4272/datasets.atom"/>
+  <link rel="next" href="http://localhost:4272/datasets2.atom"/>
   <updated>2011-12-19T14:02:02+10:00</updated>
   <entry>
     <id>http://mydatagrabber.cmm.uq.edu.au/dataset#my-generated-id-BEEFCAFE0002</id>
     <author>
       <name>tatkins</name>
-      <uri>http://mydatagrabber.cmm.uq.edu.au/users#tatkins</uri>
+      <email>tatkins@example.test</email>
     </author>
     <title>tatkins image abcd0002</title>
     <content/>
-    <category scheme="http://mytardis.org/atom-data-import#experiment"
-              term="urn:uuid:1225c695-cfb8-4ebb-aaaa-81ad445efa6a"
-              label="tatkins research billed to uqorg-x in 2011-12-19T14:00 session"/>
-    <category scheme="http://mytardis.org/atom-data-import#capture-metadata"
-              term="http://mydatagrabber.cmm.uq.edu.au/metadata#Instrument"
-              label="MST3000"/>
-    <category scheme="http://mytardis.org/atom-data-import#capture-metadata"
-              term="http://mydatagrabber.cmm.uq.edu.au/metadata#Billing-Account"
-              label="uqorg-x"/>
     <link rel="enclosure"
           href="http://mydatagrabber.cmm.uq.edu.au/files/abcd0002.tif"/>
     <link rel="enclosure"
@@ -31,19 +22,10 @@
     <id>http://mydatagrabber.cmm.uq.edu.au/dataset#my-generated-id-BEEFCAFE0001</id>
     <author>
       <name>tatkins</name>
-      <uri>http://mydatagrabber.cmm.uq.edu.au/users#tatkins</uri>
+      <email>tatkins@example.test</email>
     </author>
     <title>tatkins image abcd0001</title>
     <content/>
-    <category scheme="http://mytardis.org/atom-data-import#experiment"
-              term="urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a"
-              label="tatkins research billed to uqorg-x in 2011-12-19T14:00 session"/>
-    <category scheme="http://mytardis.org/atom-data-import#capture-metadata"
-              term="http://mydatagrabber.cmm.uq.edu.au/metadata#Instrument"
-              label="MST3000"/>
-    <category scheme="http://mytardis.org/atom-data-import#capture-metadata"
-              term="http://mydatagrabber.cmm.uq.edu.au/metadata#Billing-Account"
-              label="uqorg-x"/>
     <link rel="enclosure"
           href="http://mydatagrabber.cmm.uq.edu.au/files/abcd0001.tif"/>
     <link rel="enclosure"
