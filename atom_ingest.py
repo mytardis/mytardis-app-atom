@@ -26,12 +26,11 @@ class AtomWalker:
         datasets = []
         while True:
             datasets.extend(map(self._entry_processor, doc.entries))
-            next = self._get_next_href(doc)
-            print next
-            if next == None:
+            next_href = self._get_next_href(doc)
+            if next_href == None:
                 break
-            doc = feedparser.parse(next)
-        return datasets
+            doc = feedparser.parse(next_href)
+        return reversed(datasets)
 
     def _entry_processor(self, entry):
         d = Dataset()

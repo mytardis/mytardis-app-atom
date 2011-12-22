@@ -72,9 +72,24 @@ class ProcessorTestCase(TestCase):
         print parser.datasets()
         num_datasets = reduce(lambda a,b: a+1, parser.datasets(), 0)
         assert num_datasets == 4
+        chronologically_asc = reduce(self._check_chronological_order,\
+                                     parser.datasets(), None)
+        assert chronologically_asc
         for dataset in parser.datasets():
             assert isinstance(dataset, Dataset)
             #datafiles = parser.get_datafiles(dataset)
             #assert isinstance(datafiles, list)
             #assert len(datafiles) == 2
 
+    @staticmethod
+    def _check_chronological_order(dataset_a, dataset_b):
+        '''
+        This function checks that the Atom data sets are in chronological order.
+        IT IS DEPENDENT ON THE TEST DATA! It does not apply to all Atom
+        documents in general.
+        '''
+        if dataset_a == False:
+            return False
+        if dataset_a == None or dataset_a.description < dataset_b.description:
+            return dataset_b
+        return False
