@@ -50,7 +50,8 @@ class AtomWalker:
             new_entries = filter(lambda entry: self.persister.is_new(doc.feed, entry), doc.entries)
             entries.extend(map(lambda entry: (doc.feed, entry), new_entries))
             next_href = self._get_next_href(doc)
-            if next_href == None:
+            # Stop if the filter found an existing entry or no next
+            if len(new_entries) != len(doc.entries) or next_href == None:
                 break
             doc = feedparser.parse(next_href)
         return reversed(entries)

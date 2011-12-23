@@ -77,6 +77,9 @@ class ProcessorTestCase(TestCase):
         flexmock_teardown()
 
     def testWalkerFollowsAtomLinks(self):
+        '''
+        Test that the walker follows links.
+        '''
         # We build a persister which says all entries are new.
         persister = flexmock(AtomPersister())
         persister.should_receive('is_new').with_args(object, object)\
@@ -90,6 +93,10 @@ class ProcessorTestCase(TestCase):
         parser.ingest()
 
     def testWalkerProcessesEntriesInCorrectOrder(self):
+        '''
+        Test that the walker processes the entries in the revese order that it
+        finds them.
+        '''
         checked_entries = []
         processed_entries = []
         # We build a persister which says all entries are new.
@@ -116,12 +123,35 @@ class ProcessorTestCase(TestCase):
         assert processed_forwards
 
     def testWalkerOnlyIngestsNewEntries(self):
+        '''
+        Test that the walker will stop when it gets to an entry that isn't new.
+        '''
         # We build a persister which says there are three entries
         # that aren't in the repository.
         persister = flexmock(AtomPersister())
         persister.should_receive('is_new').with_args(object, object)\
-            .and_return(True, True, True, False).one_by_one.at_least.times(4)
+            .and_return(True, True, True, False).one_by_one.times(4)
         persister.should_receive('process').with_args(object, object).times(3)
+        parser = AtomWalker('http://localhost:%d/datasets.atom' %
+                            (self.TestWebServer.getPort()),
+                            persister)
+        parser.ingest()
+        # We build a persister which says there are two entries
+        # that aren't in the repository.
+        persister = flexmock(AtomPersister())
+        persister.should_receive('is_new').with_args(object, object)\
+            .and_return(True, True, False, False).one_by_one.times(4)
+        persister.should_receive('process').with_args(object, object).times(2)
+        parser = AtomWalker('http://localhost:%d/datasets.atom' %
+                            (self.TestWebServer.getPort()),
+                            persister)
+        parser.ingest()
+        # We build a persister which says there is one entry
+        # that isn't in the repository.
+        persister = flexmock(AtomPersister())
+        persister.should_receive('is_new').with_args(object, object)\
+            .and_return(True, False, False, False).one_by_one.times(2)
+        persister.should_receive('process').with_args(object, object).times(1)
         parser = AtomWalker('http://localhost:%d/datasets.atom' %
                             (self.TestWebServer.getPort()),
                             persister)
