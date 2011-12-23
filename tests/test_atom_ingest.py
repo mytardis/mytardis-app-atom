@@ -1,6 +1,6 @@
 from django.test import TestCase
 from tardis.tardis_portal.models import Dataset, Schema
-from tardis.apps.atomimport.atom_ingest import AtomWalker, AtomImportSchemas
+from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, AtomImportSchemas
 from flexmock import flexmock, flexmock_teardown
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 import BaseHTTPServer, os, inspect, SocketServer, threading
@@ -26,12 +26,19 @@ class ProcessorTestCase(TestCase):
         Utility class for running a test web server with a given handler.
         '''
 
+        class QuietSimpleHTTPRequestHandler(SimpleHTTPRequestHandler):
+            '''
+            Simple subclass that only prints output to STDOUT, not STDERR
+            '''
+            def log_message(self, msg, *args):
+                print msg % args
+
         class ThreadedTCPServer(SocketServer.ThreadingMixIn, \
                                 BaseHTTPServer.HTTPServer):
             pass
 
         def __init__(self):
-            self.handler = SimpleHTTPRequestHandler
+            self.handler = self.QuietSimpleHTTPRequestHandler
 
         def start(self):
             server = self.ThreadedTCPServer(('127.0.0.1', self.getPort()),
@@ -53,43 +60,81 @@ class ProcessorTestCase(TestCase):
             self.server.shutdown()
 
 
-    def setUp(self):
-        self.priorcwd = os.getcwd()
+    @classmethod
+    def setUpClass(cls):
+        cls.priorcwd = os.getcwd()
         os.chdir(os.path.dirname(__file__)+'/atom_test')
-        self.server = self.TestWebServer()
-        self.server.start()
+        cls.server = cls.TestWebServer()
+        cls.server.start()
         pass
 
+    @classmethod
+    def tearDownClass(cls):
+        os.chdir(cls.priorcwd)
+        cls.server.stop()
+
     def tearDown(self):
-        os.chdir(self.priorcwd)
-        self.server.stop()
         flexmock_teardown()
 
     def testWalkerFollowsAtomLinks(self):
+        # We build a persister which says all entries are new.
+        persister = flexmock(AtomPersister())
+        persister.should_receive('is_new').with_args(object, object)\
+            .and_return(True).times(4)
+        persister.should_receive('process').with_args(object, object)\
+            .times(4)
         parser = AtomWalker('http://localhost:%d/datasets.atom' %
-                            (self.TestWebServer.getPort()))
-        assert inspect.ismethod(parser.datasets)
-        print parser.datasets()
-        num_datasets = reduce(lambda a,b: a+1, parser.datasets(), 0)
-        assert num_datasets == 4
-        chronologically_asc = reduce(self._check_chronological_order,\
-                                     parser.datasets(), None)
-        assert chronologically_asc
-        for dataset in parser.datasets():
-            assert isinstance(dataset, Dataset)
-            #datafiles = parser.get_datafiles(dataset)
-            #assert isinstance(datafiles, list)
-            #assert len(datafiles) == 2
+                            (self.TestWebServer.getPort()),
+                            persister)
+        assert inspect.ismethod(parser.ingest)
+        parser.ingest()
+
+    def testWalkerProcessesEntriesInCorrectOrder(self):
+        checked_entries = []
+        processed_entries = []
+        # We build a persister which says all entries are new.
+        persister = flexmock(AtomPersister())
+        # Grab the checked entry and return true
+        persister.should_receive('is_new').with_args(object, object)\
+            .replace_with(lambda feed, entry: checked_entries.append(entry) or True)
+        # Grab the processed entry
+        persister.should_receive('process').with_args(object, object)\
+            .replace_with(lambda feed, entry: processed_entries.append(entry))
+        parser = AtomWalker('http://localhost:%d/datasets.atom' %
+                            (self.TestWebServer.getPort()),
+                            persister)
+        parser.ingest()
+        # We should have checked four entries, chronologically decendent
+        assert len(checked_entries) == 4
+        checked_backwards = reduce(self._check_chronological_asc_order,\
+                                     reversed(checked_entries), None)
+        assert checked_backwards
+        # We should have processed four entries, chronologically ascendent
+        assert len(processed_entries) == 4
+        processed_forwards = reduce(self._check_chronological_asc_order,\
+                                     processed_entries, None)
+        assert processed_forwards
+
+    def testWalkerOnlyIngestsNewEntries(self):
+        # We build a persister which says there are three entries
+        # that aren't in the repository.
+        persister = flexmock(AtomPersister())
+        persister.should_receive('is_new').with_args(object, object)\
+            .and_return(True, True, True, False).one_by_one.at_least.times(4)
+        persister.should_receive('process').with_args(object, object).times(3)
+        parser = AtomWalker('http://localhost:%d/datasets.atom' %
+                            (self.TestWebServer.getPort()),
+                            persister)
+        parser.ingest()
 
     @staticmethod
-    def _check_chronological_order(dataset_a, dataset_b):
+    def _check_chronological_asc_order(entry_a, entry_b):
         '''
-        This function checks that the Atom data sets are in chronological order.
-        IT IS DEPENDENT ON THE TEST DATA! It does not apply to all Atom
-        documents in general.
+        This function checks that the Atom entries sets are in chronological
+        order.
         '''
-        if dataset_a == False:
+        if entry_a == False:
             return False
-        if dataset_a == None or dataset_a.description < dataset_b.description:
-            return dataset_b
+        if entry_a == None or entry_a.updated_parsed < entry_b.updated_parsed:
+            return entry_b
         return False
