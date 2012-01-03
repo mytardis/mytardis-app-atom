@@ -177,7 +177,12 @@ class ProcessorTestCase(TestCase):
         p = AtomPersister()
         ok_(p.is_new(feed, entry), "Entry should not already be in DB")
         dataset = p.process(feed, entry)
-        eq_(len(dataset.dataset_file_set.all()), 2)
+        datafiles = dataset.dataset_file_set.all()
+        eq_(len(datafiles), 2)
+        image = dataset.dataset_file_set.get(filename='abcd0001.tif')
+        eq_(image.mimetype, 'application/octet-stream')
+        image = dataset.dataset_file_set.get(filename='metadata.txt')
+        eq_(image.mimetype, 'text/plain')
 
 
     def _getTestEntry(self):

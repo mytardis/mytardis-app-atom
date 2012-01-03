@@ -16,7 +16,7 @@
           href="http://mydatagrabber.cmm.uq.edu.au/files/abcd0002.tif"/>
     <link rel="enclosure"
           href="http://mydatagrabber.cmm.uq.edu.au/files/abcd0002.txt"
-          title="metadata.text"/>
+          title="metadata.txt"/>
     <updated>2011-12-19T14:02:00+10:00</updated>
   </entry>
   <entry>
@@ -31,7 +31,8 @@
           href="http://mydatagrabber.cmm.uq.edu.au/files/abcd0001.tif"/>
     <link rel="enclosure"
           href="http://mydatagrabber.cmm.uq.edu.au/files/abcd0001.txt"
-          title="metadata.text"/>
+          title="metadata.txt"
+          mime="text/plain"/>
     <updated>2011-12-19T14:01:00+10:00</updated>
   </entry>
 </feed>

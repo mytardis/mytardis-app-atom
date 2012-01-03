@@ -38,12 +38,11 @@ class AtomPersister:
         dataset = experiment.dataset_set.create(description=entry.id)
         dataset.save()
         for enclosure in entry.enclosures:
-            try:
-                filename = enclosure.title
-            except AttributeError:
-                filename = basename(enclosure.href)
+            filename = getattr(enclosure, 'title', basename(enclosure.href))
             datafile = dataset.dataset_file_set.create(url=enclosure.href,
                                                        filename=filename)
+            datafile.mimetype = getattr(enclosure,\
+                                        'mime', 'application/octet-stream')
             datafile.save()
         return dataset
 
