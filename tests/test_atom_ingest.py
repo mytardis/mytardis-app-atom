@@ -1,6 +1,8 @@
 from django.test import TestCase
 from tardis.tardis_portal.models import Dataset, Schema
 from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, AtomImportSchemas
+import feedparser
+from nose.tools import ok_, eq_
 from flexmock import flexmock, flexmock_teardown
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 import BaseHTTPServer, os, inspect, SocketServer, threading
@@ -76,6 +78,7 @@ class ProcessorTestCase(TestCase):
     def tearDown(self):
         flexmock_teardown()
 
+
     def testWalkerFollowsAtomLinks(self):
         '''
         Test that the walker follows links.
@@ -86,11 +89,12 @@ class ProcessorTestCase(TestCase):
             .and_return(True).times(4)
         persister.should_receive('process').with_args(object, object)\
             .times(4)
-        parser = AtomWalker('http://localhost:%d/datasets.atom' %
+        walker = AtomWalker('http://localhost:%d/datasets.atom' %
                             (self.TestWebServer.getPort()),
                             persister)
-        assert inspect.ismethod(parser.ingest)
-        parser.ingest()
+        ok_(inspect.ismethod(walker.ingest),"Walker must have an ingest method")
+        walker.ingest()
+
 
     def testWalkerProcessesEntriesInCorrectOrder(self):
         '''
@@ -112,15 +116,16 @@ class ProcessorTestCase(TestCase):
                             persister)
         parser.ingest()
         # We should have checked four entries, chronologically decendent
-        assert len(checked_entries) == 4
+        eq_(len(checked_entries), 4)
         checked_backwards = reduce(self._check_chronological_asc_order,\
                                      reversed(checked_entries), None)
-        assert checked_backwards
+        ok_(checked_backwards, "Entries aren't parsed in reverse chronological order")
         # We should have processed four entries, chronologically ascendent
-        assert len(processed_entries) == 4
+        eq_(len(processed_entries), 4)
         processed_forwards = reduce(self._check_chronological_asc_order,\
                                      processed_entries, None)
-        assert processed_forwards
+        ok_(processed_forwards, "Entries aren't parsed in chronological order")
+
 
     def testWalkerOnlyIngestsNewEntries(self):
         '''
@@ -156,6 +161,31 @@ class ProcessorTestCase(TestCase):
                             (self.TestWebServer.getPort()),
                             persister)
         parser.ingest()
+
+
+    def testPersisterRecognisesNewEntries(self):
+        feed, entry = self._getTestEntry()
+        p = AtomPersister()
+        ok_(p.is_new(feed, entry), "Entry should not already be in DB")
+        ok_(p.is_new(feed, entry), "New entries change only when processed")
+        dataset = p.process(feed, entry)
+        ok_(dataset != None)
+        eq_(p.is_new(feed, entry), False, "(processed => !new) != True")
+
+    def testPersisterCreatesDatafiles(self):
+        feed, entry = self._getTestEntry()
+        p = AtomPersister()
+        ok_(p.is_new(feed, entry), "Entry should not already be in DB")
+        dataset = p.process(feed, entry)
+        eq_(len(dataset.dataset_file_set.all()), 2)
+
+
+    def _getTestEntry(self):
+        doc = feedparser.parse('datasets.atom')
+        entry = doc.entries.pop()
+        # Check we're looking at the right entry
+        assert entry.id.endswith('BEEFCAFE0001')
+        return (doc.feed, entry)
 
     @staticmethod
     def _check_chronological_asc_order(entry_a, entry_b):

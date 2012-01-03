@@ -1,5 +1,6 @@
 import feedparser
-from tardis.tardis_portal.models import Dataset, Schema
+from posixpath import basename
+from tardis.tardis_portal.models import Experiment, Dataset, Schema, User
 
 class AtomImportSchemas:
 
@@ -14,14 +15,37 @@ class AtomPersister:
 
     def is_new(self, feed, entry):
         '''
-        @feed_id: str
-        @entry_id: str
+        :param feed: Feed context for entry
+        :param entry: Entry to check
         returns a boolean
         '''
-        return True
+        try:
+            feed = Experiment.objects.get(title=feed.id)
+        except Experiment.DoesNotExist:
+            return True
+        feed.dataset_set.get(description=entry.id)
+        return False
 
     def process(self, feed, entry):
-        pass
+        username = "feedimportuser"
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            user = User(username=username)
+            user.save()
+        experiment = Experiment(title=feed.id, created_by=user)
+        experiment.save()
+        dataset = experiment.dataset_set.create(description=entry.id)
+        dataset.save()
+        for enclosure in entry.enclosures:
+            try:
+                filename = enclosure.title
+            except AttributeError:
+                filename = basename(enclosure.href)
+            datafile = dataset.dataset_file_set.create(url=enclosure.href,
+                                                       filename=filename)
+            datafile.save()
+        return dataset
 
 class AtomWalker:
 
