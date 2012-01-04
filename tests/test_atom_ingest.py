@@ -2,6 +2,7 @@ from django.test import TestCase
 from tardis.tardis_portal.models import Dataset, Schema
 from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, AtomImportSchemas
 import feedparser
+from nose import SkipTest
 from nose.tools import ok_, eq_
 from flexmock import flexmock, flexmock_teardown
 from SimpleHTTPServer import SimpleHTTPRequestHandler
@@ -172,6 +173,7 @@ class ProcessorTestCase(TestCase):
         ok_(dataset != None)
         eq_(p.is_new(feed, entry), False, "(processed => !new) != True")
 
+
     def testPersisterCreatesDatafiles(self):
         feed, entry = self._getTestEntry()
         p = AtomPersister()
@@ -185,12 +187,29 @@ class ProcessorTestCase(TestCase):
         eq_(image.mimetype, 'text/plain')
 
 
+    def testPersisterUsesTitleElements(self):
+        feed, entry = self._getTestEntry()
+        p = AtomPersister()
+        dataset = p.process(feed, entry)
+        eq_(dataset.description, entry.title)
+
+
+    def testPersisterHandlesMultipleDatafiles(self):
+        doc = feedparser.parse('datasets.atom')
+        p = AtomPersister()
+        for feed, entry in map(lambda x: (doc.feed, x), doc.entries):
+            ok_(p.is_new(feed, entry))
+            p.process(feed, entry)
+            eq_(p.is_new(feed, entry), False, "(processed => !new) != True")
+
+
     def _getTestEntry(self):
         doc = feedparser.parse('datasets.atom')
         entry = doc.entries.pop()
         # Check we're looking at the right entry
         assert entry.id.endswith('BEEFCAFE0001')
         return (doc.feed, entry)
+
 
     @staticmethod
     def _check_chronological_asc_order(entry_a, entry_b):

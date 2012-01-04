@@ -18,5 +18,23 @@
             "name": "Atom Import - Datafile",
             "subtype": "atom-import-datafile"
         }
+    },
+    {
+        "pk": null,
+        "model": "tardis_portal.parametername",
+        "fields": {
+            "name": "EntryID",
+            "data_type": 2,
+            "is_searchable": false,
+            "choices": "",
+            "comparison_type": 1,
+            "full_name": "EntryID",
+            "units": "",
+            "order": 9999,
+            "immutable": true,
+            "schema": [
+                "http://mytardis.org/schemas/atom-import#dataset"
+            ]
+        }
     }
 ]

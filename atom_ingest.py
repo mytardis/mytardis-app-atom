@@ -1,6 +1,8 @@
 import feedparser
 from posixpath import basename
-from tardis.tardis_portal.models import Experiment, Dataset, Schema, User
+from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
+from tardis.tardis_portal.models import Dataset, DatasetParameter,\
+    Experiment, ParameterName, Schema, User
 
 class AtomImportSchemas:
 
@@ -10,8 +12,14 @@ class AtomImportSchemas:
     def get_schemas(cls):
         return Schema.objects.filter(namespace__startswith=cls.BASE_NAMESPACE)
 
+    @classmethod
+    def get_schema(cls, schema_type=Schema.DATASET):
+        return Schema.objects.get(namespace__startswith=cls.BASE_NAMESPACE,
+                                  type=schema_type)
 
 class AtomPersister:
+
+    PARAM_ENTRY_ID = 'EntryID'
 
     def is_new(self, feed, entry):
         '''
@@ -20,31 +28,60 @@ class AtomPersister:
         returns a boolean
         '''
         try:
-            feed = Experiment.objects.get(title=feed.id)
-        except Experiment.DoesNotExist:
+            self._get_dataset(feed, entry)
+            return False
+        except Dataset.DoesNotExist:
             return True
-        feed.dataset_set.get(description=entry.id)
-        return False
+
+
+    def _get_dataset(self, feed, entry):
+        try:
+            param_name = ParameterName.objects.get(name=self.PARAM_ENTRY_ID,
+                                                   schema=AtomImportSchemas.get_schema())
+            parameter = DatasetParameter.objects.get(name=param_name,
+                                                     string_value=entry.id)
+        except DatasetParameter.DoesNotExist:
+            raise Dataset.DoesNotExist
+        return parameter.parameterset.dataset
+
+
+    @classmethod
+    def _create_id_parameter_set(self, dataset, entry):
+        namespace = AtomImportSchemas.get_schema().namespace
+        mgr = ParameterSetManager(parentObject=dataset, schema=namespace)
+        mgr.new_param(self.PARAM_ENTRY_ID, entry.id)
+
 
     def process(self, feed, entry):
+        # Create user to associate with dataset
         username = "feedimportuser"
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             user = User(username=username)
             user.save()
-        experiment = Experiment(title=feed.id, created_by=user)
-        experiment.save()
-        dataset = experiment.dataset_set.create(description=entry.id)
-        dataset.save()
-        for enclosure in entry.enclosures:
-            filename = getattr(enclosure, 'title', basename(enclosure.href))
-            datafile = dataset.dataset_file_set.create(url=enclosure.href,
-                                                       filename=filename)
-            datafile.mimetype = getattr(enclosure,\
-                                        'mime', 'application/octet-stream')
-            datafile.save()
+        # Create dataset if necessary
+        try:
+            dataset = self._get_dataset(feed, entry)
+        except Dataset.DoesNotExist:
+            try:
+                experiment = Experiment.objects.get(title=feed.id)
+            except Experiment.DoesNotExist:
+                experiment = Experiment(title=feed.id, created_by=user)
+                experiment.save()
+            dataset = experiment.dataset_set.create(description=entry.title)
+            dataset.save()
+            self._create_id_parameter_set(dataset, entry)
+            for enclosure in entry.enclosures:
+                filename = getattr(enclosure, 'title', basename(enclosure.href))
+                datafile = dataset.dataset_file_set.create(url=enclosure.href,
+                                                           filename=filename)
+                datafile.mimetype = getattr(enclosure,\
+                                            'mime', 'application/octet-stream')
+                datafile.save()
         return dataset
+
+
 
 class AtomWalker:
 
