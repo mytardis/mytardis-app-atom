@@ -1,25 +1,43 @@
 import feedparser
 from posixpath import basename
+from celery.task import task
+from tardis.tardis_portal.staging import write_uploaded_file_to_dataset
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter,\
     Experiment, ParameterName, Schema, User
+from urllib2 import urlopen
+
+
+@task
+def make_local_copy(datafile):
+    f = urlopen(datafile.url)
+    print f.info()
+    f_loc = write_uploaded_file_to_dataset(datafile.dataset, f, datafile.filename)
+    datafile.url = 'tardis:/' + f_loc
+    datafile.save()
+
 
 class AtomImportSchemas:
 
     BASE_NAMESPACE = 'http://mytardis.org/schemas/atom-import'
 
+
     @classmethod
     def get_schemas(cls):
         return Schema.objects.filter(namespace__startswith=cls.BASE_NAMESPACE)
+
 
     @classmethod
     def get_schema(cls, schema_type=Schema.DATASET):
         return Schema.objects.get(namespace__startswith=cls.BASE_NAMESPACE,
                                   type=schema_type)
 
+
+
 class AtomPersister:
 
     PARAM_ENTRY_ID = 'EntryID'
+
 
     def is_new(self, feed, entry):
         '''
@@ -79,15 +97,18 @@ class AtomPersister:
                 datafile.mimetype = getattr(enclosure,\
                                             'mime', 'application/octet-stream')
                 datafile.save()
+                make_local_copy.delay(datafile)
         return dataset
 
 
 
 class AtomWalker:
 
+
     def __init__(self, root_doc, persister = AtomPersister()):
         self.root_doc = root_doc
         self.persister = persister
+
 
     @staticmethod
     def _get_next_href(doc):
@@ -96,9 +117,11 @@ class AtomWalker:
             return None
         return links[0].href
 
+
     def ingest(self):
         for feed, entry in self.get_entries():
             self.persister.process(feed, entry)
+
 
     def get_entries(self):
         '''

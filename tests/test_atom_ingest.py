@@ -183,6 +183,7 @@ class ProcessorTestCase(TestCase):
         eq_(len(datafiles), 2)
         image = dataset.dataset_file_set.get(filename='abcd0001.tif')
         eq_(image.mimetype, 'application/octet-stream')
+        ok_(image.url.startswith('tardis://'), "Not local: %s" % image.url)
         image = dataset.dataset_file_set.get(filename='metadata.txt')
         eq_(image.mimetype, 'text/plain')
 
