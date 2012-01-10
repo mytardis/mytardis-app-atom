@@ -5,12 +5,14 @@ from tardis.tardis_portal.staging import write_uploaded_file_to_dataset
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter,\
     Experiment, ParameterName, Schema, User
-from urllib2 import urlopen
+from django.conf import settings
+import urllib2
 
 
 @task
 def make_local_copy(datafile):
-    f = urlopen(datafile.url)
+    opener = urllib2.build_opener((AtomWalker.get_credential_handler()))
+    f = opener.open(datafile.url)
     print f.info()
     f_loc = write_uploaded_file_to_dataset(datafile.dataset, f, datafile.filename)
     datafile.url = 'tardis:/' + f_loc
@@ -111,6 +113,16 @@ class AtomWalker:
 
 
     @staticmethod
+    def get_credential_handler():
+        passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        for url, username, password in settings.ATOM_FEED_CREDENTIALS:
+            passman.add_password(None, url, username, password)
+        handler = urllib2.HTTPBasicAuthHandler(passman)
+        handler.handler_order = 490
+        return handler
+
+
+    @staticmethod
     def _get_next_href(doc):
         links = filter(lambda x: x.rel == 'next', doc.feed.links)
         if len(links) < 1:
@@ -127,15 +139,20 @@ class AtomWalker:
         '''
         returns list of (feed, entry) tuples
         '''
-        doc = feedparser.parse(self.root_doc)
+        doc = self.fetch_feed(self.root_doc)
         entries = []
         while True:
+            if doc == None:
+                break
             new_entries = filter(lambda entry: self.persister.is_new(doc.feed, entry), doc.entries)
             entries.extend(map(lambda entry: (doc.feed, entry), new_entries))
             next_href = self._get_next_href(doc)
             # Stop if the filter found an existing entry or no next
             if len(new_entries) != len(doc.entries) or next_href == None:
                 break
-            doc = feedparser.parse(next_href)
+            doc = self.fetch_feed(next_href)
         return reversed(entries)
+
+    def fetch_feed(self, url):
+        return feedparser.parse(url, handlers=[self.get_credential_handler()])
 

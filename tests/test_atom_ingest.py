@@ -6,7 +6,7 @@ from nose import SkipTest
 from nose.tools import ok_, eq_
 from flexmock import flexmock, flexmock_teardown
 from SimpleHTTPServer import SimpleHTTPRequestHandler
-import BaseHTTPServer, os, inspect, SocketServer, threading
+import BaseHTTPServer, os, inspect, SocketServer, threading, urllib2
 
 
 class SchemaTestCase(TestCase):
@@ -35,6 +35,14 @@ class ProcessorTestCase(TestCase):
             '''
             def log_message(self, msg, *args):
                 print msg % args
+
+            def do_GET(self):
+                if self.headers.getheader('Authorization') == None:
+                    self.send_response(401, 'Unauthorized')
+                    self.send_header('WWW-Authenticate', 'Basic realm="Test"')
+                    self.end_headers()
+                    return
+                SimpleHTTPRequestHandler.do_GET(self)
 
         class ThreadedTCPServer(SocketServer.ThreadingMixIn, \
                                 BaseHTTPServer.HTTPServer):
@@ -78,6 +86,26 @@ class ProcessorTestCase(TestCase):
 
     def tearDown(self):
         flexmock_teardown()
+
+
+    def testWalkerCredentials(self):
+        '''
+        Test that the walker manages credentials.
+        '''
+        address = 'http://localhost:%d/datasets.atom' % \
+                                (self.TestWebServer.getPort())
+        try:
+            urllib2.urlopen(address)
+            ok_(False, 'Should have thrown error')
+        except urllib2.HTTPError:
+            pass
+        opener = urllib2.build_opener((AtomWalker.get_credential_handler()))
+        try:
+            f = opener.open(address)
+            eq_(f.getcode(), 200, 'Should have been: "200 OK"')
+        except urllib2.HTTPError:
+            ok_(False, 'Should not have thrown error')
+        pass
 
 
     def testWalkerFollowsAtomLinks(self):
