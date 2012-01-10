@@ -6,7 +6,7 @@ from nose import SkipTest
 from nose.tools import ok_, eq_
 from flexmock import flexmock, flexmock_teardown
 from SimpleHTTPServer import SimpleHTTPRequestHandler
-import BaseHTTPServer, os, inspect, SocketServer, threading, urllib2
+import BaseHTTPServer, base64, os, inspect, SocketServer, threading, urllib2
 
 
 class SchemaTestCase(TestCase):
@@ -36,8 +36,18 @@ class ProcessorTestCase(TestCase):
             def log_message(self, msg, *args):
                 print msg % args
 
-            def do_GET(self):
+            def _isAuthorized(self):
                 if self.headers.getheader('Authorization') == None:
+                    return False
+                t, creds = self.headers.getheader('Authorization').split(" ")
+                if t != "Basic":
+                    return False
+                if base64.b64decode(creds) != "username:password":
+                    return False
+                return True
+
+            def do_GET(self):
+                if not self._isAuthorized():
                     self.send_response(401, 'Unauthorized')
                     self.send_header('WWW-Authenticate', 'Basic realm="Test"')
                     self.end_headers()
