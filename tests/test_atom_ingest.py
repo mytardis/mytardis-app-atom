@@ -1,5 +1,5 @@
 from django.test import TestCase
-from tardis.tardis_portal.models import Dataset, Schema
+from tardis.tardis_portal.models import Dataset, Schema, User
 from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, AtomImportSchemas
 import feedparser
 from nose import SkipTest
@@ -130,6 +130,29 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         p = AtomPersister()
         dataset = p.process(feed, entry)
         eq_(dataset.description, entry.title)
+
+
+    def testPersisterUsesAuthorNameAsUsername(self):
+        # Create user to associate with dataset
+        user = User(username="tatkins")
+        user.save()
+        feed, entry = self._getTestEntry()
+        p = AtomPersister()
+        dataset = p.process(feed, entry)
+        eq_(dataset.experiment.created_by, user)
+
+
+    def testPersisterPrefersAuthorEmailToMatchUser(self):
+        # Create user to associate with dataset
+        user = User(username="tatkins")
+        user.save()
+        # Create user to associate with dataset
+        user2 = User(username="tommy", email='tatkins@example.test')
+        user2.save()
+        feed, entry = self._getTestEntry()
+        p = AtomPersister()
+        dataset = p.process(feed, entry)
+        eq_(dataset.experiment.created_by, user2)
 
 
     def testPersisterHandlesMultipleDatafiles(self):

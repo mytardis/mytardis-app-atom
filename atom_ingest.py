@@ -72,14 +72,24 @@ class AtomPersister:
         mgr.new_param(self.PARAM_ENTRY_ID, entry.id)
 
 
-    def process(self, feed, entry):
-        # Create user to associate with dataset
-        username = "feedimportuser"
+    def _get_user_from_entry(self, entry):
+        if entry.author_detail.email != None:
+            try:
+                return User.objects.get(email=entry.author_detail.email)
+            except User.DoesNotExist:
+                print "No user for "+entry.author_detail.email+" found."
+                pass
         try:
-            user = User.objects.get(username=username)
+            return User.objects.get(username=entry.author_detail.name)
         except User.DoesNotExist:
-            user = User(username=username)
-            user.save()
+            pass
+        user = User(username=entry.author_detail.name)
+        user.save()
+        return user
+
+
+    def process(self, feed, entry):
+        user = self._get_user_from_entry(entry)
         # Create dataset if necessary
         try:
             dataset = self._get_dataset(feed, entry)
