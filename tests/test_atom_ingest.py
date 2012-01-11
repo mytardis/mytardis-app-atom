@@ -282,6 +282,24 @@ class WalkerTestCase(AbstractAtomServerTestCase):
                             persister)
         parser.ingest()
 
+
+    def testWalkerAgainstPicasa(self):
+        '''
+        Test against Picasa
+        '''
+        # We build a persister which says there are three entries
+        # that aren't in the repository.
+        persister = flexmock(AtomPersister())
+        persister.should_receive('is_new').with_args(object, object) \
+            .and_return(*tuple([True] * 3+[False]*497)).one_by_one \
+            .times(500)
+        persister.should_call('process').times(3)
+        # Google Picassa should give us 500 entries
+        parser = AtomWalker('https://picasaweb.google.com/data/feed/base/all',
+                            persister)
+        parser.ingest()
+
+
     @staticmethod
     def _check_chronological_asc_order(entry_a, entry_b):
         '''

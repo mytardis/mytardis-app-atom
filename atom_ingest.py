@@ -77,7 +77,6 @@ class AtomPersister:
             try:
                 return User.objects.get(email=entry.author_detail.email)
             except User.DoesNotExist:
-                print "No user for "+entry.author_detail.email+" found."
                 pass
         try:
             return User.objects.get(username=entry.author_detail.name)
@@ -86,6 +85,29 @@ class AtomPersister:
         user = User(username=entry.author_detail.name)
         user.save()
         return user
+
+    def process_enclosure(self, dataset, enclosure):
+        filename = getattr(enclosure, 'title', basename(enclosure.href))
+        datafile = dataset.dataset_file_set.create(url=enclosure.href, \
+                                                   filename=filename)
+        datafile.mimetype = getattr(enclosure, 'mime', \
+                                    'application/octet-stream')
+        datafile.save()
+        make_local_copy.delay(datafile)
+
+
+    def process_media_content(self, dataset, media_content):
+        try:
+            filename = basename(media_content['url'])
+        except AttributeError:
+            print media_content
+        datafile = dataset.dataset_file_set.create(url=media_content['url'], \
+                                                   filename=filename)
+        datafile.mimetype = getattr(media_content, 'type', \
+                                    'application/octet-stream')
+        datafile.save()
+        #make_local_copy.delay(datafile)
+
 
 
     def process(self, feed, entry):
@@ -102,14 +124,10 @@ class AtomPersister:
             dataset = experiment.dataset_set.create(description=entry.title)
             dataset.save()
             self._create_id_parameter_set(dataset, entry)
-            for enclosure in entry.enclosures:
-                filename = getattr(enclosure, 'title', basename(enclosure.href))
-                datafile = dataset.dataset_file_set.create(url=enclosure.href,
-                                                           filename=filename)
-                datafile.mimetype = getattr(enclosure,\
-                                            'mime', 'application/octet-stream')
-                datafile.save()
-                make_local_copy.delay(datafile)
+            for enclosure in getattr(entry, 'enclosures', []):
+                self.process_enclosure(dataset, enclosure)
+            for media_content in getattr(entry, 'media_content', []):
+                self.process_media_content(dataset, media_content)
         return dataset
 
 
