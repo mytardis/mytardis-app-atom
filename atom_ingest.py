@@ -106,7 +106,7 @@ class AtomPersister:
         datafile.mimetype = getattr(media_content, 'type', \
                                     'application/octet-stream')
         datafile.save()
-        #make_local_copy.delay(datafile)
+        make_local_copy.delay(datafile)
 
 
 

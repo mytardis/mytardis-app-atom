@@ -287,16 +287,17 @@ class WalkerTestCase(AbstractAtomServerTestCase):
         '''
         Test against Picasa
         '''
+        raise SkipTest
         # We build a persister which says there are three entries
         # that aren't in the repository.
         persister = flexmock(AtomPersister())
         persister.should_receive('is_new').with_args(object, object) \
             .and_return(*tuple([True] * 3+[False]*497)).one_by_one \
-            .times(500)
+            .at_most.times(500)
         persister.should_call('process').times(3)
-        # Google Picassa should give us 500 entries
-        parser = AtomWalker('https://picasaweb.google.com/data/feed/base/all',
-                            persister)
+        # Google Picassa should give us 500 entries per page
+        url = 'http://picasaweb.google.com/data/feed/base/all?prettyprint=true&tag=wombat&kind=photo'
+        parser = AtomWalker(url, persister)
         parser.ingest()
 
 
