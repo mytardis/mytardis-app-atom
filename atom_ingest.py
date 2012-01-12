@@ -1,23 +1,10 @@
 import feedparser
 from posixpath import basename
-from celery.task import task
-from tardis.tardis_portal.staging import write_uploaded_file_to_dataset
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter,\
     Experiment, ParameterName, Schema, User
 from django.conf import settings
 import urllib2
-
-
-@task
-def make_local_copy(datafile):
-    opener = urllib2.build_opener((AtomWalker.get_credential_handler()))
-    f = opener.open(datafile.url)
-    print f.info()
-    f_loc = write_uploaded_file_to_dataset(datafile.dataset, f, datafile.filename)
-    datafile.url = 'tardis:/' + f_loc
-    datafile.save()
-
 
 class AtomImportSchemas:
 
@@ -90,24 +77,31 @@ class AtomPersister:
         filename = getattr(enclosure, 'title', basename(enclosure.href))
         datafile = dataset.dataset_file_set.create(url=enclosure.href, \
                                                    filename=filename)
-        datafile.mimetype = getattr(enclosure, 'mime', \
-                                    'application/octet-stream')
+        try:
+            datafile.mimetype = enclosure.mime
+        except AttributeError:
+            pass
         datafile.save()
-        make_local_copy.delay(datafile)
+        self.make_local_copy(datafile)
 
 
     def process_media_content(self, dataset, media_content):
         try:
             filename = basename(media_content['url'])
         except AttributeError:
-            print media_content
+            return
         datafile = dataset.dataset_file_set.create(url=media_content['url'], \
                                                    filename=filename)
-        datafile.mimetype = getattr(media_content, 'type', \
-                                    'application/octet-stream')
+        try:
+            datafile.mimetype = media_content['type']
+        except IndexError:
+            pass
         datafile.save()
-        make_local_copy.delay(datafile)
+        self.make_local_copy(datafile)
 
+    def make_local_copy(self, datafile):
+        from tardis.apps.atomimport.tasks import make_local_copy
+        make_local_copy.delay(datafile)
 
 
     def process(self, feed, entry):
@@ -117,7 +111,8 @@ class AtomPersister:
             dataset = self._get_dataset(feed, entry)
         except Dataset.DoesNotExist:
             try:
-                experiment = Experiment.objects.get(title=feed.id)
+                experiment = Experiment.objects.get(title=feed.id, \
+                                                    created_by=user)
             except Experiment.DoesNotExist:
                 experiment = Experiment(title=feed.id, created_by=user)
                 experiment.save()
@@ -143,8 +138,12 @@ class AtomWalker:
     @staticmethod
     def get_credential_handler():
         passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        for url, username, password in settings.ATOM_FEED_CREDENTIALS:
-            passman.add_password(None, url, username, password)
+        try:
+            for url, username, password in settings.ATOM_FEED_CREDENTIALS:
+                passman.add_password(None, url, username, password)
+        except AttributeError:
+            # We may not have settings.ATOM_FEED_CREDENTIALS
+            pass
         handler = urllib2.HTTPBasicAuthHandler(passman)
         handler.handler_order = 490
         return handler
@@ -152,10 +151,14 @@ class AtomWalker:
 
     @staticmethod
     def _get_next_href(doc):
-        links = filter(lambda x: x.rel == 'next', doc.feed.links)
-        if len(links) < 1:
+        try:
+            links = filter(lambda x: x.rel == 'next', doc.feed.links)
+            if len(links) < 1:
+                return None
+            return links[0].href
+        except AttributeError:
+            # May not have any links to filter
             return None
-        return links[0].href
 
 
     def ingest(self):

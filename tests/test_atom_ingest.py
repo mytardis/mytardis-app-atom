@@ -1,7 +1,9 @@
+from django.conf import settings
 from django.test import TestCase
 from tardis.tardis_portal.models import Dataset, Schema, User
 from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, AtomImportSchemas
 import feedparser
+from os import path
 from nose import SkipTest
 from nose.tools import ok_, eq_
 from flexmock import flexmock, flexmock_teardown
@@ -119,8 +121,15 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         datafiles = dataset.dataset_file_set.all()
         eq_(len(datafiles), 2)
         image = dataset.dataset_file_set.get(filename='abcd0001.tif')
-        eq_(image.mimetype, 'application/octet-stream')
+        # No mimetype specified, so should auto-detect
+        eq_(image.mimetype, 'image/tiff')
         ok_(image.url.startswith('tardis://'), "Not local: %s" % image.url)
+        raw_path = image.url.partition('//')[2]
+        file_path = path.join(settings.FILE_STORE_PATH,
+                              str(image.dataset.experiment.id),
+                              str(image.dataset.id),
+                              raw_path)
+        ok_(path.isfile(file_path), "File does not exist: %s" % file_path)
         image = dataset.dataset_file_set.get(filename='metadata.txt')
         eq_(image.mimetype, 'text/plain')
 
