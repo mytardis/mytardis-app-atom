@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.test import TestCase
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
-from tardis.tardis_portal.models import Experiment, Dataset, Schema, User
-from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, AtomImportSchemas
+from tardis.tardis_portal.models import Experiment, Dataset, Dataset_File, \
+    Schema, User
+from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, \
+    AtomImportSchemas
 import feedparser
 from os import path
 from nose import SkipTest
@@ -181,6 +183,43 @@ class PersisterTestCase(AbstractAtomServerTestCase):
             ok_(False, "The experiment title should not include the entry ID")
         except ValueError:
             pass
+
+
+    def testPersisterUsesExperimentMetadata(self):
+        '''
+        Test against Picasa - useful for development testing
+        '''
+        # Build a persister with "make_local_copy" mocked out
+        # (file transfer isn't part of this test)
+        persister = flexmock(AtomPersister())
+        persister.should_receive('make_local_copy').times(8)
+
+        doc = feedparser.parse('datasets2.atom')
+        # Process the first set of entries
+        for entry in reversed(doc.entries):
+            persister.process(doc.feed, entry)
+        # We processed 4 datafiles
+        eq_(Dataset_File.objects.count(), 4)
+        # We processed 2 datasets
+        eq_(Dataset.objects.count(), 2)
+        # This part has a single user
+        eq_(User.objects.count(), 1)
+        # This part is untagged, so there should only be a single experiment
+        eq_(Experiment.objects.count(), 1)
+
+        doc = feedparser.parse('datasets.atom')
+        # Process the rest of the entries
+        for entry in reversed(doc.entries):
+            persister.process(doc.feed, entry)
+        # Whe should now have 8 datafiles
+        eq_(Dataset_File.objects.count(), 8)
+        # Whe should now have 4 datasets
+        eq_(Dataset.objects.count(), 4)
+        # Whe should now have two users
+        eq_(User.objects.count(), 2)
+        # This part is tagged as two experiements, so there should be three now
+        eq_(Experiment.objects.count(), 3)
+
 
     def testPersisterAgainstPicasa(self):
         '''

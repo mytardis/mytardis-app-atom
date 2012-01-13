@@ -1,8 +1,8 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <id>http://localhost:4272/datasets2.atom</id>
+  <id>http://mydatagrabber.cmm.uq.edu.au/#datafeed</id>
   <title>Data grabber data set feed</title>
-  <link rel="self" href="http://localhost:4272/datasets2.atom"/>
-  <link rel="prev" href="http://localhost:4272/datasets.atom"/>
+  <link rel="self" href="datasets2.atom"/>
+  <link rel="prev" href="datasets.atom"/>
   <updated>2011-12-19T13:02:02+10:00</updated>
   <entry>
     <id>urn:uuid:4123a90e-a479-463a-8a94-951a5e1940ec</id>

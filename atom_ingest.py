@@ -27,6 +27,7 @@ class AtomPersister:
 
     PARAM_ENTRY_ID = 'EntryID'
     PARAM_EXPERIMENT_ID = 'ExperimentID'
+    PARAM_EXPERIMENT_TITLE = 'ExperimentTitle'
 
 
     def is_new(self, feed, entry):
@@ -51,7 +52,6 @@ class AtomPersister:
         except DatasetParameter.DoesNotExist:
             raise Dataset.DoesNotExist
         return parameter.parameterset.dataset
-
 
 
     def _create_entry_id_parameter_set(self, dataset, entryId):
@@ -113,15 +113,29 @@ class AtomPersister:
         make_local_copy.delay(datafile)
 
 
-    def _get_experiment_details(self, entry):
+    def _get_experiment_details(self, entry, user):
         try:
-            return (entry.gphoto_albumid, entry.gphoto_albumtitle)
+            # Google Picasa attributes
+            if entry.has_key('gphoto_albumid'):
+                return (entry.gphoto_albumid, entry.gphoto_albumtitle)
+            # Standard category handling
+            experimentId = None
+            title = None
+            # http://packages.python.org/feedparser/reference-entry-tags.html
+            for tag in entry.tags:
+                if tag.scheme.endswith(self.PARAM_EXPERIMENT_ID):
+                    experimentId = tag.term
+                if tag.scheme.endswith(self.PARAM_EXPERIMENT_TITLE):
+                    title = tag.term
+            if (experimentId != None and title != None):
+                return (experimentId, title)
         except AttributeError:
-            return (entry.id, entry.title)
+            pass
+        return (user.username+"-default", "Uncategorized Data")
 
 
     def _get_experiment(self, entry, user):
-        experimentId, title = self._get_experiment_details(entry)
+        experimentId, title = self._get_experiment_details(entry, user)
         try:
             try:
                 param_name = ParameterName.objects.\

@@ -1,8 +1,8 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <id>http://localhost:4272/datasets.atom</id>
+  <id>http://mydatagrabber.cmm.uq.edu.au/#datafeed</id>
   <title>Data grabber data set feed</title>
-  <link rel="self" href="http://localhost:4272/datasets.atom"/>
-  <link rel="next" href="http://localhost:4272/datasets2.atom"/>
+  <link rel="self" href="datasets.atom"/>
+  <link rel="next" href="datasets2.atom"/>
   <updated>2011-12-19T14:02:02+10:00</updated>
   <entry>
     <id>http://mydatagrabber.cmm.uq.edu.au/dataset#my-generated-id-BEEFCAFE0002</id>
@@ -11,6 +11,10 @@
       <email>tatkins@example.test</email>
     </author>
     <title>tatkins image abcd0002</title>
+    <category scheme="http://mytardis.org/schemas/atom-import#experiment-ExperimentID"
+        term="http://mydatagrabber.cmm.uq.edu.au/experiment#data-indexing-research"/>
+    <category scheme="http://mytardis.org/schemas/atom-import#experiment-ExperimentTitle"
+        term="Data indexing research"/>
     <content/>
     <link rel="enclosure"
           href="http://localhost:4272/files/abcd0002.tif"/>
@@ -26,6 +30,10 @@
       <email>tatkins@example.test</email>
     </author>
     <title>tatkins image abcd0001</title>
+    <category scheme="http://mytardis.org/schemas/atom-import#experiment-ExperimentID"
+        term="http://mydatagrabber.cmm.uq.edu.au/experiment#ongoing-image-storage-research"/>
+    <category scheme="http://mytardis.org/schemas/atom-import#experiment-ExperimentTitle"
+        term="On-going image storage research"/>
     <content/>
     <link rel="enclosure"
           href="http://localhost:4272/files/abcd0001.tif"/>
