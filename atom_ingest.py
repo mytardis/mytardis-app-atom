@@ -2,7 +2,7 @@ import feedparser
 from posixpath import basename
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter,\
-    Experiment, ParameterName, Schema, User
+    Experiment, ExperimentParameter, ParameterName, Schema, User
 from django.conf import settings
 import urllib2
 
@@ -26,6 +26,7 @@ class AtomImportSchemas:
 class AtomPersister:
 
     PARAM_ENTRY_ID = 'EntryID'
+    PARAM_EXPERIMENT_ID = 'ExperimentID'
 
 
     def is_new(self, feed, entry):
@@ -52,11 +53,17 @@ class AtomPersister:
         return parameter.parameterset.dataset
 
 
-    @classmethod
-    def _create_id_parameter_set(self, dataset, entry):
-        namespace = AtomImportSchemas.get_schema().namespace
+
+    def _create_entry_id_parameter_set(self, dataset, entryId):
+        namespace = AtomImportSchemas.get_schema(Schema.DATASET).namespace
         mgr = ParameterSetManager(parentObject=dataset, schema=namespace)
-        mgr.new_param(self.PARAM_ENTRY_ID, entry.id)
+        mgr.new_param(self.PARAM_ENTRY_ID, entryId)
+
+
+    def _create_experiment_id_parameter_set(self, experiment, experimentId):
+        namespace = AtomImportSchemas.get_schema(Schema.EXPERIMENT).namespace
+        mgr = ParameterSetManager(parentObject=experiment, schema=namespace)
+        mgr.new_param(self.PARAM_EXPERIMENT_ID, experimentId)
 
 
     def _get_user_from_entry(self, entry):
@@ -72,6 +79,7 @@ class AtomPersister:
         user = User(username=entry.author_detail.name)
         user.save()
         return user
+
 
     def process_enclosure(self, dataset, enclosure):
         filename = getattr(enclosure, 'title', basename(enclosure.href))
@@ -99,9 +107,36 @@ class AtomPersister:
         datafile.save()
         self.make_local_copy(datafile)
 
+
     def make_local_copy(self, datafile):
         from tardis.apps.atomimport.tasks import make_local_copy
         make_local_copy.delay(datafile)
+
+
+    def _get_experiment_details(self, entry):
+        try:
+            return (entry.gphoto_albumid, entry.gphoto_albumtitle)
+        except AttributeError:
+            return (entry.id, entry.title)
+
+
+    def _get_experiment(self, entry, user):
+        experimentId, title = self._get_experiment_details(entry)
+        try:
+            try:
+                param_name = ParameterName.objects.\
+                    get(name=self.PARAM_EXPERIMENT_ID, \
+                        schema=AtomImportSchemas.get_schema(Schema.EXPERIMENT))
+                parameter = ExperimentParameter.objects.\
+                    get(name=param_name, string_value=experimentId)
+            except ExperimentParameter.DoesNotExist:
+                raise Experiment.DoesNotExist
+            return parameter.parameterset.experiment
+        except Experiment.DoesNotExist:
+            experiment = Experiment(title=title, created_by=user)
+            experiment.save()
+            self._create_experiment_id_parameter_set(experiment, experimentId)
+            return experiment
 
 
     def process(self, feed, entry):
@@ -110,15 +145,10 @@ class AtomPersister:
         try:
             dataset = self._get_dataset(feed, entry)
         except Dataset.DoesNotExist:
-            try:
-                experiment = Experiment.objects.get(title=feed.id, \
-                                                    created_by=user)
-            except Experiment.DoesNotExist:
-                experiment = Experiment(title=feed.id, created_by=user)
-                experiment.save()
+            experiment = self._get_experiment(entry, user)
             dataset = experiment.dataset_set.create(description=entry.title)
             dataset.save()
-            self._create_id_parameter_set(dataset, entry)
+            self._create_entry_id_parameter_set(dataset, entry.id)
             for enclosure in getattr(entry, 'enclosures', []):
                 self.process_enclosure(dataset, enclosure)
             for media_content in getattr(entry, 'media_content', []):
@@ -183,6 +213,7 @@ class AtomWalker:
                 break
             doc = self.fetch_feed(next_href)
         return reversed(entries)
+
 
     def fetch_feed(self, url):
         return feedparser.parse(url, handlers=[self.get_credential_handler()])

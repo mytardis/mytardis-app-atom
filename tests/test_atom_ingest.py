@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.test import TestCase
-from tardis.tardis_portal.models import Dataset, Schema, User
+from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
+from tardis.tardis_portal.models import Experiment, Dataset, Schema, User
 from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, AtomImportSchemas
 import feedparser
 from os import path
@@ -163,6 +164,60 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         dataset = p.process(feed, entry)
         eq_(dataset.experiment.created_by, user2)
 
+    def testPersisterAvoidsOverloadingExperimentTitle(self):
+        # Create user to associate with dataset
+        user = User(username="tatkins")
+        user.save()
+        feed, entry = self._getTestEntry()
+        p = AtomPersister()
+        dataset = p.process(feed, entry)
+        try:
+            dataset.experiment.title.index(feed.id)
+            ok_(False, "The experiment title should not include the feed ID")
+        except ValueError:
+            pass
+        try:
+            dataset.experiment.title.index(entry.id)
+            ok_(False, "The experiment title should not include the entry ID")
+        except ValueError:
+            pass
+
+    def testPersisterAgainstPicasa(self):
+        '''
+        Test against Picasa - useful for development testing
+        '''
+        # Build a persister with "make_local_copy" mocked out
+        # (file transfer isn't part of this test)
+        persister = flexmock(AtomPersister())
+        persister.should_receive('make_local_copy').times(50)
+        doc = feedparser.parse('picasa_example.atom')
+        # Process the first twenty entries
+        for entry in list(reversed(doc.entries))[0:20]:
+            persister.process(doc.feed, entry)
+        # We processed 20 images (Picasa only has one image per dataset)
+        eq_(Dataset.objects.count(), 20)
+        # This part has 2 users
+        eq_(User.objects.count(), 2)
+        # This part covers 6 albums
+        eq_(Experiment.objects.count(), 6)
+        for experiment in Experiment.objects.all():
+            pset = experiment.getParameterSets().get(schema=AtomImportSchemas. \
+                            get_schema(Schema.EXPERIMENT))
+            pset_mgr = ParameterSetManager(pset)
+            assert experiment.title != pset_mgr.get_param('ExperimentID')
+            # Change the experiment titles, to check this won't be a problem
+            experiment.title = "Title removed for testing"
+            experiment.save()
+        # Process the rest of the entries
+        for entry in list(reversed(doc.entries))[20:]:
+            persister.process(doc.feed, entry)
+        # We processed 50 images (Picasa only has one image per dataset)
+        eq_(Dataset.objects.count(), 50)
+        # This part has 2 users
+        eq_(User.objects.count(), 4)
+        # This part covers 6 albums
+        eq_(Experiment.objects.count(), 9)
+
 
     def testPersisterHandlesMultipleDatafiles(self):
         doc = feedparser.parse('datasets.atom')
@@ -301,11 +356,11 @@ class WalkerTestCase(AbstractAtomServerTestCase):
         # that aren't in the repository.
         persister = flexmock(AtomPersister())
         persister.should_receive('is_new').with_args(object, object) \
-            .and_return(*tuple([True] * 3+[False]*497)).one_by_one \
-            .at_most.times(500)
-        persister.should_call('process').times(3)
+            .and_return(*tuple([True] * 47 + [False] * 3)).one_by_one \
+            .at_most.times(50)
+        persister.should_call('process').times(47)
         # Google Picassa should give us 500 entries per page
-        url = 'http://picasaweb.google.com/data/feed/base/all?prettyprint=true&tag=wombat&kind=photo'
+        url = 'http://picasaweb.google.com/data/feed/base/all?tag=wombat&kind=photo&max-results=5'
         parser = AtomWalker(url, persister)
         parser.ingest()
 

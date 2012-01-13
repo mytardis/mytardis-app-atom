@@ -3,6 +3,16 @@
         "pk": null,
         "model": "tardis_portal.schema",
         "fields": {
+            "type": 1,
+            "namespace": "http://mytardis.org/schemas/atom-import#experiment",
+            "name": "Atom Import - Experiment",
+            "subtype": "atom-import-experiment"
+        }
+    },
+    {
+        "pk": null,
+        "model": "tardis_portal.schema",
+        "fields": {
             "type": 2,
             "namespace": "http://mytardis.org/schemas/atom-import#dataset",
             "name": "Atom Import - Dataset",
@@ -17,6 +27,24 @@
             "namespace": "http://mytardis.org/schemas/atom-import#datafile",
             "name": "Atom Import - Datafile",
             "subtype": "atom-import-datafile"
+        }
+    },
+    {
+        "pk": null,
+        "model": "tardis_portal.parametername",
+        "fields": {
+            "name": "ExperimentID",
+            "data_type": 2,
+            "is_searchable": false,
+            "choices": "",
+            "comparison_type": 1,
+            "full_name": "ExperimentID",
+            "units": "",
+            "order": 9999,
+            "immutable": true,
+            "schema": [
+                "http://mytardis.org/schemas/atom-import#experiment"
+            ]
         }
     },
     {
