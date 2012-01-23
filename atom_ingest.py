@@ -109,7 +109,7 @@ class AtomPersister:
 
 
     def make_local_copy(self, datafile):
-        from tardis.apps.atomimport.tasks import make_local_copy
+        from .tasks import make_local_copy
         make_local_copy.delay(datafile)
 
 

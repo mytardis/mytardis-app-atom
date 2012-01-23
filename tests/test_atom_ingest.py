@@ -3,8 +3,8 @@ from django.test import TestCase
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Experiment, Dataset, Dataset_File, \
     Schema, User
-from tardis.apps.atomimport.atom_ingest import AtomPersister, AtomWalker, \
-    AtomImportSchemas
+from ..atom_ingest import AtomPersister, AtomWalker, \
+    AtomImportSchemas, __file__ as atom_ingest_file
 import feedparser
 from os import path
 from nose import SkipTest
@@ -75,7 +75,14 @@ class TestWebServer:
 class AbstractAtomServerTestCase(TestCase):
 
     @classmethod
+    def init_settings(cls):
+        settings.ATOM_FEED_CREDENTIALS = [
+            ('http://localhost:4272/', 'username', 'password')
+        ]
+
+    @classmethod
     def setUpClass(cls):
+        cls.init_settings()
         cls.priorcwd = os.getcwd()
         os.chdir(os.path.dirname(__file__)+'/atom_test')
         cls.server = TestWebServer()

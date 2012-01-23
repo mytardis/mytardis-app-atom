@@ -2,7 +2,7 @@ from celery.task import task
 from django.conf import settings
 from django.db import DatabaseError
 from tardis.tardis_portal.staging import write_uploaded_file_to_dataset
-from tardis.apps.atomimport.atom_ingest import AtomWalker
+from .atom_ingest import AtomWalker
 import urllib2, os
 
 
