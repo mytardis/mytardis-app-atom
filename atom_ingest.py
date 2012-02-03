@@ -13,13 +13,24 @@ class AtomImportSchemas:
 
     @classmethod
     def get_schemas(cls):
-        return Schema.objects.filter(namespace__startswith=cls.BASE_NAMESPACE)
-
+        cls._load_fixture_if_necessary();
+        return cls._get_all_schemas();
 
     @classmethod
     def get_schema(cls, schema_type=Schema.DATASET):
+        cls._load_fixture_if_necessary();
         return Schema.objects.get(namespace__startswith=cls.BASE_NAMESPACE,
                                   type=schema_type)
+
+    @classmethod
+    def _load_fixture_if_necessary(cls):
+        if (cls._get_all_schemas().count() == 0):
+            from django.core.management import call_command
+            call_command('loaddata', 'atom_ingest_schema')
+
+    @classmethod
+    def _get_all_schemas(cls):
+        return Schema.objects.filter(namespace__startswith=cls.BASE_NAMESPACE)
 
 
 
