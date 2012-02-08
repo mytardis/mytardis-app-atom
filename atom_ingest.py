@@ -78,11 +78,11 @@ class AtomPersister:
 
 
     def _get_user_from_entry(self, entry):
-        if entry.author_detail.email != None:
-            try:
+        try:
+            if entry.author_detail.email != None:
                 return User.objects.get(email=entry.author_detail.email)
-            except User.DoesNotExist:
-                pass
+        except (User.DoesNotExist, AttributeError):
+            pass
         try:
             return User.objects.get(username=entry.author_detail.name)
         except User.DoesNotExist:
