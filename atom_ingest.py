@@ -1,8 +1,9 @@
 import feedparser
 from posixpath import basename
+from tardis.tardis_portal.auth.localdb_auth import django_user
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter,\
-    Experiment, ExperimentParameter, ParameterName, Schema, User
+    Experiment, ExperimentACL, ExperimentParameter, ParameterName, Schema, User
 from django.conf import settings
 import urllib2
 
@@ -161,6 +162,15 @@ class AtomPersister:
             experiment = Experiment(title=title, created_by=user)
             experiment.save()
             self._create_experiment_id_parameter_set(experiment, experimentId)
+            acl = ExperimentACL(experiment=experiment,
+                    pluginId=django_user,
+                    entityId=user.id,
+                    canRead=True,
+                    canWrite=True,
+                    canDelete=True,
+                    isOwner=True,
+                    aclOwnershipType=ExperimentACL.OWNER_OWNED)
+            acl.save()
             return experiment
 
 
