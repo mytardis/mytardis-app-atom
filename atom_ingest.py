@@ -1,4 +1,5 @@
 import feedparser
+import iso8601
 from posixpath import basename
 from tardis.tardis_portal.auth.localdb_auth import django_user
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
@@ -39,6 +40,7 @@ class AtomPersister:
 
     PARAM_ENTRY_ID = 'EntryID'
     PARAM_EXPERIMENT_ID = 'ExperimentID'
+    PARAM_UPDATED = 'Updated'
     PARAM_EXPERIMENT_TITLE = 'ExperimentTitle'
 
 
@@ -66,10 +68,11 @@ class AtomPersister:
         return parameter.parameterset.dataset
 
 
-    def _create_entry_id_parameter_set(self, dataset, entryId):
+    def _create_entry_parameter_set(self, dataset, entryId, updated):
         namespace = AtomImportSchemas.get_schema(Schema.DATASET).namespace
         mgr = ParameterSetManager(parentObject=dataset, schema=namespace)
         mgr.new_param(self.PARAM_ENTRY_ID, entryId)
+        mgr.new_param(self.PARAM_UPDATED, iso8601.parse_date(updated))
 
 
     def _create_experiment_id_parameter_set(self, experiment, experimentId):
@@ -183,7 +186,7 @@ class AtomPersister:
             experiment = self._get_experiment(entry, user)
             dataset = experiment.dataset_set.create(description=entry.title)
             dataset.save()
-            self._create_entry_id_parameter_set(dataset, entry.id)
+            self._create_entry_parameter_set(dataset, entry.id, entry.updated)
             for enclosure in getattr(entry, 'enclosures', []):
                 self.process_enclosure(dataset, enclosure)
             for media_content in getattr(entry, 'media_content', []):

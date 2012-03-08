@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.test import TestCase
+from compare import expect
+import iso8601
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Experiment, Dataset, Dataset_File, \
     Schema, User
@@ -173,29 +175,26 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         dataset = p.process(feed, entry)
         eq_(dataset.experiment.created_by, user2)
 
-    def testPersisterAvoidsOverloadingExperimentTitle(self):
+    def testPersisterStoresEntryMetadata(self):
         # Create user to associate with dataset
         user = User(username="tatkins")
         user.save()
         feed, entry = self._getTestEntry()
         p = AtomPersister()
         dataset = p.process(feed, entry)
-        try:
-            dataset.experiment.title.index(feed.id)
-            ok_(False, "The experiment title should not include the feed ID")
-        except ValueError:
-            pass
-        try:
-            dataset.experiment.title.index(entry.id)
-            ok_(False, "The experiment title should not include the entry ID")
-        except ValueError:
-            pass
+        parameterset = dataset.getParameterSets() \
+                              .get(schema=AtomImportSchemas. \
+                                          get_schema(Schema.DATASET))
+        expect(parameterset) != None
+        psm = ParameterSetManager(parameterset)
+        expect(psm.get_param('EntryID').get()).to_equal(entry.id)
+        expect(psm.get_param('Updated').name.isDateTime()).to_be_truthy()
+        # Compare against non-timezoned update time
+        expect(psm.get_param('Updated', True)) \
+            .to_equal(iso8601.parse_date(entry.updated))
 
 
     def testPersisterUsesExperimentMetadata(self):
-        '''
-        Test against Picasa - useful for development testing
-        '''
         # Build a persister with "make_local_copy" mocked out
         # (file transfer isn't part of this test)
         persister = flexmock(AtomPersister())
