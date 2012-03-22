@@ -87,11 +87,13 @@ class AtomPersister:
                 return User.objects.get(email=entry.author_detail.email)
         except (User.DoesNotExist, AttributeError):
             pass
+        # Handle spaces in name
+        username_ = entry.author_detail.name.strip().replace(" ", "_")
         try:
-            return User.objects.get(username=entry.author_detail.name)
+            return User.objects.get(username=username_)
         except User.DoesNotExist:
             pass
-        user = User(username=entry.author_detail.name)
+        user = User(username=username_)
         user.save()
         return user
 

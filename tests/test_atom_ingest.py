@@ -162,6 +162,16 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         dataset = p.process(feed, entry)
         eq_(dataset.experiment.created_by, user)
 
+    def testPersisterHandlesSpacesInUsername(self):
+        # Get entry and use a name with a space in it
+        feed, entry = self._getTestEntry()
+        entry.author_detail.name = 'Tommy Atkins'
+        # Create user to associate with dataset
+        user = User(username="Tommy_Atkins")
+        user.save()
+        p = AtomPersister()
+        dataset = p.process(feed, entry)
+        eq_(dataset.experiment.created_by, user)
 
     def testPersisterPrefersAuthorEmailToMatchUser(self):
         # Create user to associate with dataset
