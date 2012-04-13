@@ -13,10 +13,10 @@ Symlink this app into a MyTardis `tardis/apps` directory. The preferred name for
 Configuration
 -------------
 
-Celery is used to schedule periodic file ingestion. Import from Picasa is supported to provide a 
+Celery is used to schedule periodic file ingestion. Import from Picasa is supported to provide a
 quick example, but in most deployments you'll want to write your own Atom producer.
 
-The `atom_ingest.walk_feeds` task takes a variable number of feeds and updates them. Here's an example 
+The `atom_ingest.walk_feeds` task takes a variable number of feeds and updates them. Here's an example
 for `settings.py` that checks two Picassa feeds every 30 seconds:
 
     CELERYBEAT_SCHEDULE = {
@@ -24,7 +24,7 @@ for `settings.py` that checks two Picassa feeds every 30 seconds:
         "task": "atom_ingest.walk_feeds",
         "schedule": timedelta(seconds=30),
         "args": ('http://picasaweb.google.com/data/feed/base/all?prettyprint=true&tag=wombat&kind=photo',
-                 'http://picasaweb.google.com/data/feed/base/all?prettyprint=true&tag=numbat&kind=photo )
+                 'http://picasaweb.google.com/data/feed/base/all?prettyprint=true&tag=numbat&kind=photo')
       },
     }
 
