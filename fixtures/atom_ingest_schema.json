@@ -6,7 +6,8 @@
             "type": 1,
             "namespace": "http://mytardis.org/schemas/atom-import#experiment",
             "name": "Atom Import - Experiment",
-            "subtype": "atom-import-experiment"
+            "subtype": "atom-import-experiment",
+            "immutable": true
         }
     },
     {
@@ -16,7 +17,8 @@
             "type": 2,
             "namespace": "http://mytardis.org/schemas/atom-import#dataset",
             "name": "Atom Import - Dataset",
-            "subtype": "atom-import-dataset"
+            "subtype": "atom-import-dataset",
+            "immutable": true
         }
     },
     {
@@ -26,7 +28,8 @@
             "type": 3,
             "namespace": "http://mytardis.org/schemas/atom-import#datafile",
             "name": "Atom Import - Datafile",
-            "subtype": "atom-import-datafile"
+            "subtype": "atom-import-datafile",
+            "immutable": true
         }
     },
     {
