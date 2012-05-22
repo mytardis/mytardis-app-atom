@@ -27,10 +27,9 @@ def make_local_copy(datafile):
         f = opener.open(datafile.url)
         f_loc = write_uploaded_file_to_dataset(datafile.dataset, f, \
                                                datafile.filename)
-        base_path = os.path.join(settings.FILE_STORE_PATH,
-                          str(datafile.dataset.experiment.id),
-                          str(datafile.dataset.id))
+        base_path = datafile.dataset.get_absolute_filepath()
         datafile.url = 'tardis://' + os.path.relpath(f_loc, base_path)
+        datafile.protocol = 'tardis'
         datafile.save()
     except DatabaseError, exc:
         make_local_copy.retry(args=[datafile], exc=exc)

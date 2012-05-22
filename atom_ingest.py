@@ -107,6 +107,7 @@ class AtomPersister:
         filename = getattr(enclosure, 'title', basename(enclosure.href))
         datafile = dataset.dataset_file_set.create(url=enclosure.href, \
                                                    filename=filename)
+        datafile.protocol = enclosure.href.partition('://')[0]
         try:
             datafile.mimetype = enclosure.mime
         except AttributeError:
@@ -122,6 +123,7 @@ class AtomPersister:
             return
         datafile = dataset.dataset_file_set.create(url=media_content['url'], \
                                                    filename=filename)
+        datafile.protocol = media_content['url'].partition('://')[0]
         try:
             datafile.mimetype = media_content['type']
         except IndexError:
@@ -198,7 +200,7 @@ class AtomPersister:
             dataset = self._get_dataset(feed, entry)
         except Dataset.DoesNotExist:
             experiment = self._get_experiment(entry, user)
-            dataset = experiment.dataset_set.create(description=entry.title)
+            dataset = experiment.datasets.create(description=entry.title)
             logger.debug('Creating new dataset: %s' % entry.title)
             dataset.save()
             self._create_entry_parameter_set(dataset, entry.id, entry.updated)

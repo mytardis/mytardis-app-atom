@@ -137,10 +137,7 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         eq_(image.mimetype, 'image/tiff')
         ok_(image.url.startswith('tardis://'), "Not local: %s" % image.url)
         raw_path = image.url.partition('//')[2]
-        file_path = path.join(settings.FILE_STORE_PATH,
-                              str(image.dataset.experiment.id),
-                              str(image.dataset.id),
-                              raw_path)
+        file_path = path.join(image.dataset.get_absolute_filepath(), raw_path)
         ok_(path.isfile(file_path), "File does not exist: %s" % file_path)
         image = dataset.dataset_file_set.get(filename='metadata.txt')
         eq_(image.mimetype, 'text/plain')
@@ -160,7 +157,7 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         feed, entry = self._getTestEntry()
         p = AtomPersister()
         dataset = p.process(feed, entry)
-        eq_(dataset.experiment.created_by, user)
+        eq_(dataset.get_first_experiment().created_by, user)
 
     def testPersisterHandlesSpacesInUsername(self):
         # Get entry and use a name with a space in it
@@ -171,7 +168,7 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         user.save()
         p = AtomPersister()
         dataset = p.process(feed, entry)
-        eq_(dataset.experiment.created_by, user)
+        eq_(dataset.get_first_experiment().created_by, user)
 
     def testPersisterPrefersAuthorEmailToMatchUser(self):
         # Create user to associate with dataset
@@ -183,7 +180,7 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         feed, entry = self._getTestEntry()
         p = AtomPersister()
         dataset = p.process(feed, entry)
-        eq_(dataset.experiment.created_by, user2)
+        eq_(dataset.get_first_experiment().created_by, user2)
 
     def testPersisterStoresEntryMetadata(self):
         # Create user to associate with dataset
