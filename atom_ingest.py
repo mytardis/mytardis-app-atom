@@ -9,6 +9,13 @@ from tardis.tardis_portal.models import Dataset, DatasetParameter,\
 from django.conf import settings
 import urllib2
 
+# Ensure filters are loaded
+try:
+    from tardis.tardis_portal.filters import FilterInitMiddleware
+    FilterInitMiddleware()
+except Exception:
+    pass
+
 import logging
 logger = logging.getLogger(__name__)
 
