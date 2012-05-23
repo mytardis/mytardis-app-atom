@@ -203,11 +203,16 @@ class AtomPersister:
             dataset = experiment.datasets.create(description=entry.title)
             logger.debug('Creating new dataset: %s' % entry.title)
             dataset.save()
+            # Add metadata for matching dataset to entry in future
             self._create_entry_parameter_set(dataset, entry.id, entry.updated)
+            # Add datafiles
             for enclosure in getattr(entry, 'enclosures', []):
                 self.process_enclosure(dataset, enclosure)
             for media_content in getattr(entry, 'media_content', []):
                 self.process_media_content(dataset, media_content)
+            # Set dataset to be immutable
+            dataset.immutable = True
+            dataset.save()
         return dataset
 
 
