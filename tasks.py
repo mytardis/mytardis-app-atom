@@ -20,13 +20,3 @@ def walk_feed(feed):
 def walk_feeds(*feeds):
     for feed in feeds:
         walk_feed.delay(feed)
-
-
-@task(name="atom_ingest.make_local_copy", ignore_result=True)
-def make_local_copy(datafile):
-    try:
-        stage_file(datafile,
-                   urllib2.build_opener((AtomWalker.get_credential_handler())))
-    except DatabaseError, exc:
-        make_local_copy.retry(args=[datafile], exc=exc)
-

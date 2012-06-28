@@ -13,29 +13,28 @@ Symlink this app into a MyTardis `tardis/apps` directory. The preferred name for
 Configuration
 -------------
 
-Celery is used to schedule periodic file ingestion. Import from Picasa is supported to provide a
-quick example, but in most deployments you'll want to write your own Atom producer.
+Celery is used to schedule periodic file ingestion.
 
 The `atom_ingest.walk_feeds` task takes a variable number of feeds and updates them. Here's an example
 for `settings.py` that checks two Picassa feeds every 30 seconds:
 
-    CELERYBEAT_SCHEDULE = {
+    CELERYBEAT_SCHEDULE = dict(CELERYBEAT_SCHEDULE.items() + {
       "update-feeds": {
         "task": "atom_ingest.walk_feeds",
         "schedule": timedelta(seconds=30),
         "args": ('http://example.org/feed.atom',
                  'http://example.test/feed.atom')
       },
-    }
+    }.items())
 
 You must run [celerybeat][celerybeat] and [celeryd][celeryd] for the scheduled updates to be performed.
 MyTardis provides a `Procfile` for this purpose, but you can run both adhoc with:
 
     bin/django celeryd --beat
 
-HTTP Basic password protection is available via `settings.py`:
+HTTP Basic password protection is available via `settings.py` in MyTardis:
 
-    ATOM_FEED_CREDENTIALS = [
+    REMOTE_SERVER_CREDENTIALS = [
       ('http://localhost:4272/', 'username', 'password')
     ]
 

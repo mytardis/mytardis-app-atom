@@ -10,82 +10,17 @@ from ..atom_ingest import AtomPersister, AtomWalker, \
 import feedparser
 from urlparse import urlparse
 from os import path
-from nose import SkipTest
 from nose.tools import ok_, eq_
 from flexmock import flexmock, flexmock_teardown
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 import BaseHTTPServer, base64, os, inspect, SocketServer, threading, urllib2
 
-class TestWebServer:
-    '''
-    Utility class for running a test web server with a given handler.
-    '''
-
-    class QuietSimpleHTTPRequestHandler(SimpleHTTPRequestHandler):
-        '''
-        Simple subclass that only prints output to STDOUT, not STDERR
-        '''
-        def log_message(self, msg, *args):
-            print msg % args
-
-        def _isAuthorized(self):
-            if self.headers.getheader('Authorization') == None:
-                return False
-            t, creds = self.headers.getheader('Authorization').split(" ")
-            if t != "Basic":
-                return False
-            if base64.b64decode(creds) != "username:password":
-                return False
-            return True
-
-        def do_GET(self):
-            if not self._isAuthorized():
-                self.send_response(401, 'Unauthorized')
-                self.send_header('WWW-Authenticate', 'Basic realm="Test"')
-                self.end_headers()
-                return
-            SimpleHTTPRequestHandler.do_GET(self)
-
-    class ThreadedTCPServer(SocketServer.ThreadingMixIn, \
-                            BaseHTTPServer.HTTPServer):
-        pass
-
-    def __init__(self):
-        self.handler = self.QuietSimpleHTTPRequestHandler
-
-    def start(self):
-        server = self.ThreadedTCPServer(('127.0.0.1', self.getPort()),
-                                        self.handler)
-        server_thread = threading.Thread(target=server.serve_forever)
-        server_thread.daemon = True
-        server_thread.start()
-        self.server = server
-        return server.socket.getsockname()
-
-    def getUrl(self):
-        return 'http://%s:%d/' % self.server.socket.getsockname()
-
-    @classmethod
-    def getPort(cls):
-        return 4272
-
-    def stop(self):
-        self.server.shutdown()
-        self.server.socket.close()
-
-
+from tardis.tardis_portal.tests.test_fetcher import TestWebServer
 
 class AbstractAtomServerTestCase(TestCase):
 
     @classmethod
-    def init_settings(cls):
-        settings.ATOM_FEED_CREDENTIALS = [
-            ('http://localhost:4272/', 'username', 'password')
-        ]
-
-    @classmethod
     def setUpClass(cls):
-        cls.init_settings()
         cls.priorcwd = os.getcwd()
         os.chdir(os.path.dirname(__file__)+'/atom_test')
         cls.server = TestWebServer()
@@ -257,26 +192,6 @@ class WalkerTestCase(AbstractAtomServerTestCase):
         flexmock_teardown()
 
 
-    def testWalkerCredentials(self):
-        '''
-        Test that the walker manages credentials.
-        '''
-        address = 'http://localhost:%d/datasets.atom' % \
-                                (TestWebServer.getPort())
-        try:
-            urllib2.urlopen(address)
-            ok_(False, 'Should have thrown error')
-        except urllib2.HTTPError:
-            pass
-        opener = urllib2.build_opener((AtomWalker.get_credential_handler()))
-        try:
-            f = opener.open(address)
-            eq_(f.getcode(), 200, 'Should have been: "200 OK"')
-        except urllib2.HTTPError:
-            ok_(False, 'Should not have thrown error')
-        pass
-
-
     def testWalkerFollowsAtomLinks(self):
         '''
         Test that the walker follows links.
@@ -358,24 +273,6 @@ class WalkerTestCase(AbstractAtomServerTestCase):
         parser = AtomWalker('http://localhost:%d/datasets.atom' %
                             (TestWebServer.getPort()),
                             persister)
-        parser.ingest()
-
-
-    def testWalkerAgainstPicasa(self):
-        '''
-        Test against Picasa
-        '''
-        raise SkipTest
-        # We build a persister which says there are three entries
-        # that aren't in the repository.
-        persister = flexmock(AtomPersister())
-        persister.should_receive('is_new').with_args(object, object) \
-            .and_return(*tuple([True] * 47 + [False] * 3)).one_by_one \
-            .at_most.times(50)
-        persister.should_call('process').times(47)
-        # Google Picassa should give us 500 entries per page
-        url = 'http://picasaweb.google.com/data/feed/base/all?tag=wombat&kind=photo&max-results=5'
-        parser = AtomWalker(url, persister)
         parser.ingest()
 
 

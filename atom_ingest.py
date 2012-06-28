@@ -2,6 +2,7 @@ import feedparser
 import iso8601
 from posixpath import basename
 from tardis.tardis_portal.auth.localdb_auth import django_user
+from tardis.tardis_portal.fetcher import get_credential_handler
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter, \
     Experiment, ExperimentACL, ExperimentParameter, ParameterName, Schema, \
@@ -138,8 +139,8 @@ class AtomPersister:
 
 
     def make_local_copy(self, datafile):
-        from .tasks import make_local_copy
-        make_local_copy.delay(datafile)
+        from tardis.tardis_portal.tasks import make_local_copy
+        make_local_copy.delay(datafile.id)
 
 
     def _get_experiment_details(self, entry, user):
@@ -231,20 +232,6 @@ class AtomWalker:
 
 
     @staticmethod
-    def get_credential_handler():
-        passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        try:
-            for url, username, password in settings.ATOM_FEED_CREDENTIALS:
-                passman.add_password(None, url, username, password)
-        except AttributeError:
-            # We may not have settings.ATOM_FEED_CREDENTIALS
-            pass
-        handler = urllib2.HTTPBasicAuthHandler(passman)
-        handler.handler_order = 490
-        return handler
-
-
-    @staticmethod
     def _get_next_href(doc):
         try:
             links = filter(lambda x: x.rel == 'next', doc.feed.links)
@@ -282,5 +269,5 @@ class AtomWalker:
 
     def fetch_feed(self, url):
         logger.debug('Fetching feed: %s' % url)
-        return feedparser.parse(url, handlers=[self.get_credential_handler()])
+        return feedparser.parse(url, handlers=[get_credential_handler()])
 
