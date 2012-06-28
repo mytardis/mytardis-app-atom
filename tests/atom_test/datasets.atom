@@ -17,9 +17,14 @@
         term="Data indexing research"/>
     <content/>
     <link rel="enclosure"
-          href="http://localhost:4272/files/abcd0002.tif"/>
+          href="http://localhost:4272/files/abcd0002.tif"
+          length="1318"
+          hash="sha-512:a191b890de79c11140e89cc41e0610a5feab7975a40f1cf0a242e700c3f3be40ba82df8486fcae94b166eca23aaf343dca1781995d41ae3449290ebcd4671bd4"
+          />
     <link rel="enclosure"
           href="http://localhost:4272/files/abcd0002.txt"
+          length="16"
+          hash="sha-512:22c39447f59e31bb38ed24b4e87ad6ac02306f4a31e0a109a8cbf2613e014276bd9ea550c2b0b7fd0d510b2f162c2bebf7a0bc48f00706ec24664bdff1636a73"
           title="metadata.txt"/>
     <updated>2011-12-19T14:02:00+10:00</updated>
   </entry>
@@ -36,9 +41,13 @@
         term="On-going image storage research"/>
     <content/>
     <link rel="enclosure"
-          href="http://localhost:4272/files/abcd0001.tif"/>
+          href="http://localhost:4272/files/abcd0001.tif"
+          length="1318"
+          hash="sha-512:a191b890de79c11140e89cc41e0610a5feab7975a40f1cf0a242e700c3f3be40ba82df8486fcae94b166eca23aaf343dca1781995d41ae3449290ebcd4671bd4"/>
     <link rel="enclosure"
           href="http://localhost:4272/files/abcd0001.txt"
+          length="16"
+          hash="sha-512:22c39447f59e31bb38ed24b4e87ad6ac02306f4a31e0a109a8cbf2613e014276bd9ea550c2b0b7fd0d510b2f162c2bebf7a0bc48f00706ec24664bdff1636a73"
           title="metadata.txt"
           mime="text/plain"/>
     <updated>2011-12-19T14:01:00+10:00</updated>

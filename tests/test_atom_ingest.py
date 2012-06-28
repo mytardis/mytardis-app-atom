@@ -8,6 +8,7 @@ from tardis.tardis_portal.models import Experiment, Dataset, Dataset_File, \
 from ..atom_ingest import AtomPersister, AtomWalker, \
     AtomImportSchemas, __file__ as atom_ingest_file
 import feedparser
+from urlparse import urlparse
 from os import path
 from nose import SkipTest
 from nose.tools import ok_, eq_
@@ -135,9 +136,8 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         image = dataset.dataset_file_set.get(filename='abcd0001.tif')
         # No mimetype specified, so should auto-detect
         eq_(image.mimetype, 'image/tiff')
-        ok_(image.url.startswith('tardis://'), "Not local: %s" % image.url)
-        raw_path = image.url.partition('//')[2]
-        file_path = path.join(image.dataset.get_absolute_filepath(), raw_path)
+        ok_(urlparse(image.url).scheme == '', "Not local: %s" % image.url)
+        file_path = path.join(settings.MEDIA_ROOT, image.url)
         ok_(path.isfile(file_path), "File does not exist: %s" % file_path)
         image = dataset.dataset_file_set.get(filename='metadata.txt')
         eq_(image.mimetype, 'text/plain')
@@ -232,44 +232,6 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         eq_(User.objects.count(), 2)
         # This part is tagged as two experiements, so there should be three now
         eq_(Experiment.objects.count(), 3)
-
-
-    def testPersisterAgainstPicasa(self):
-        '''
-        Test against Picasa - useful for development testing
-        '''
-        # Build a persister with "make_local_copy" mocked out
-        # (file transfer isn't part of this test)
-        persister = flexmock(AtomPersister())
-        persister.should_receive('make_local_copy').times(50)
-        doc = feedparser.parse('picasa_example.atom')
-        # Process the first twenty entries
-        for entry in list(reversed(doc.entries))[0:20]:
-            persister.process(doc.feed, entry)
-        # We processed 20 images (Picasa only has one image per dataset)
-        eq_(Dataset.objects.count(), 20)
-        # This part has 2 users
-        eq_(User.objects.count(), 2)
-        # This part covers 6 albums
-        eq_(Experiment.objects.count(), 6)
-        for experiment in Experiment.objects.all():
-            pset = experiment.getParameterSets().get(schema=AtomImportSchemas. \
-                            get_schema(Schema.EXPERIMENT))
-            pset_mgr = ParameterSetManager(pset)
-            assert experiment.title != pset_mgr.get_param('ExperimentID')
-            # Change the experiment titles, to check this won't be a problem
-            experiment.title = "Title removed for testing"
-            experiment.save()
-        # Process the rest of the entries
-        for entry in list(reversed(doc.entries))[20:]:
-            persister.process(doc.feed, entry)
-        # We processed 50 images (Picasa only has one image per dataset)
-        eq_(Dataset.objects.count(), 50)
-        # This part has 2 users
-        eq_(User.objects.count(), 4)
-        # This part covers 6 albums
-        eq_(Experiment.objects.count(), 9)
-
 
     def testPersisterHandlesMultipleDatafiles(self):
         doc = feedparser.parse('datasets.atom')

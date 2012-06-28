@@ -23,8 +23,8 @@ for `settings.py` that checks two Picassa feeds every 30 seconds:
       "update-feeds": {
         "task": "atom_ingest.walk_feeds",
         "schedule": timedelta(seconds=30),
-        "args": ('http://picasaweb.google.com/data/feed/base/all?prettyprint=true&tag=wombat&kind=photo',
-                 'http://picasaweb.google.com/data/feed/base/all?prettyprint=true&tag=numbat&kind=photo')
+        "args": ('http://example.org/feed.atom',
+                 'http://example.test/feed.atom')
       },
     }
 

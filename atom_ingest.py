@@ -3,9 +3,9 @@ import iso8601
 from posixpath import basename
 from tardis.tardis_portal.auth.localdb_auth import django_user
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
-from tardis.tardis_portal.models import Dataset, DatasetParameter,\
+from tardis.tardis_portal.models import Dataset, DatasetParameter, \
     Experiment, ExperimentACL, ExperimentParameter, ParameterName, Schema, \
-    User, UserProfile
+    Dataset_File, User, UserProfile
 from django.db import transaction
 from django.conf import settings
 import urllib2
@@ -113,28 +113,25 @@ class AtomPersister:
 
     def process_enclosure(self, dataset, enclosure):
         filename = getattr(enclosure, 'title', basename(enclosure.href))
-        datafile = dataset.dataset_file_set.create(url=enclosure.href, \
-                                                   filename=filename)
+        datafile = Dataset_File(url=enclosure.href, \
+                                filename=filename, \
+                                dataset=dataset)
         datafile.protocol = enclosure.href.partition('://')[0]
         try:
             datafile.mimetype = enclosure.mime
         except AttributeError:
             pass
-        datafile.save()
-        self.make_local_copy(datafile)
-
-
-    def process_media_content(self, dataset, media_content):
         try:
-            filename = basename(media_content['url'])
+            datafile.size = enclosure.length
         except AttributeError:
-            return
-        datafile = dataset.dataset_file_set.create(url=media_content['url'], \
-                                                   filename=filename)
-        datafile.protocol = media_content['url'].partition('://')[0]
+            pass
         try:
-            datafile.mimetype = media_content['type']
-        except IndexError:
+            hash = enclosure.hash
+            # Split on white space, then ':' to get tuples to feed into dict
+            hashdict = dict([s.partition(':')[::2] for s in hash.split()])
+            # Set SHA-512 sum
+            datafile.sha512sum = hashdict['sha-512']
+        except AttributeError:
             pass
         datafile.save()
         self.make_local_copy(datafile)
@@ -147,11 +144,6 @@ class AtomPersister:
 
     def _get_experiment_details(self, entry, user):
         try:
-            # Google Picasa attributes
-            if entry.has_key('gphoto_albumid'):
-                return (entry.gphoto_albumid,
-                        entry.gphoto_albumtitle,
-                        Experiment.PUBLIC_ACCESS_FULL)
             # Standard category handling
             experimentId = None
             title = None
@@ -223,8 +215,6 @@ class AtomPersister:
                 # Add datafiles
                 for enclosure in getattr(entry, 'enclosures', []):
                     self.process_enclosure(dataset, enclosure)
-                for media_content in getattr(entry, 'media_content', []):
-                    self.process_media_content(dataset, media_content)
                 # Set dataset to be immutable
                 dataset.immutable = True
                 dataset.save()

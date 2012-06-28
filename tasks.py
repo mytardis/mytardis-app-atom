@@ -1,7 +1,9 @@
 from celery.task import task
 from django.conf import settings
 from django.db import DatabaseError
-from tardis.tardis_portal.staging import write_uploaded_file_to_dataset
+from tempfile import NamedTemporaryFile
+
+from tardis.tardis_portal.staging import stage_file
 from .atom_ingest import AtomWalker
 import urllib2, os
 
@@ -23,13 +25,8 @@ def walk_feeds(*feeds):
 @task(name="atom_ingest.make_local_copy", ignore_result=True)
 def make_local_copy(datafile):
     try:
-        opener = urllib2.build_opener((AtomWalker.get_credential_handler()))
-        f = opener.open(datafile.url)
-        f_loc = write_uploaded_file_to_dataset(datafile.dataset, f, \
-                                               datafile.filename)
-        base_path = datafile.dataset.get_absolute_filepath()
-        datafile.url = 'tardis://' + os.path.relpath(f_loc, base_path)
-        datafile.protocol = 'tardis'
-        datafile.save()
+        stage_file(datafile,
+                   urllib2.build_opener((AtomWalker.get_credential_handler())))
     except DatabaseError, exc:
         make_local_copy.retry(args=[datafile], exc=exc)
+
