@@ -17,6 +17,12 @@ try:
     FilterInitMiddleware()
 except Exception:
     pass
+# Ensure logging is configured
+try:
+    from tardis.tardis_portal.logging_middleware import LoggingMiddleware
+    LoggingMiddleware()
+except Exception:
+    pass
 
 import logging
 logger = logging.getLogger(__name__)
