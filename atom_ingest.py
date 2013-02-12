@@ -6,7 +6,7 @@ from tardis.tardis_portal.fetcher import get_credential_handler
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter, \
     Experiment, ExperimentACL, ExperimentParameter, ParameterName, Schema, \
-    Dataset_File, User, UserProfile
+    Dataset_File, User, UserProfile, Replica, Location
 from django.db import transaction
 from django.conf import settings
 import urllib2
