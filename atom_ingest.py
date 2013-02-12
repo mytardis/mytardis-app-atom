@@ -120,10 +120,10 @@ class AtomPersister:
 
     def process_enclosure(self, dataset, enclosure):
         filename = getattr(enclosure, 'title', basename(enclosure.href))
-        datafile = Dataset_File(url=enclosure.href, \
-                                filename=filename, \
-                                dataset=dataset)
-        datafile.protocol = enclosure.href.partition('://')[0]
+        datafile = Dataset_File(filename=filename, dataset=dataset)
+        replica = Replica(datafile=datafile, url=enclosure.href,
+                          location=Location.get_default_location())
+        replica.protocol = enclosure.href.partition('://')[0]
         try:
             datafile.mimetype = enclosure.mime
         except AttributeError:
@@ -141,12 +141,13 @@ class AtomPersister:
         except AttributeError:
             pass
         datafile.save()
-        self.make_local_copy(datafile)
+        replica.save()
+        self.make_local_copy(replica)
 
 
-    def make_local_copy(self, datafile):
+    def make_local_copy(self, replica):
         from tardis.tardis_portal.tasks import make_local_copy
-        make_local_copy.delay(datafile.id)
+        make_local_copy.delay(replica.id)
 
 
     def _get_experiment_details(self, entry, user):
