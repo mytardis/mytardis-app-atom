@@ -121,9 +121,6 @@ class AtomPersister:
     def process_enclosure(self, dataset, enclosure):
         filename = getattr(enclosure, 'title', basename(enclosure.href))
         datafile = Dataset_File(filename=filename, dataset=dataset)
-        replica = Replica(datafile=datafile, url=enclosure.href,
-                          location=Location.get_default_location())
-        replica.protocol = enclosure.href.partition('://')[0]
         try:
             datafile.mimetype = enclosure.mime
         except AttributeError:
@@ -141,6 +138,9 @@ class AtomPersister:
         except AttributeError:
             pass
         datafile.save()
+        replica = Replica(datafile=datafile, url=enclosure.href,
+                          location=Location.get_default_location())
+        replica.protocol = enclosure.href.partition('://')[0]
         replica.save()
         self.make_local_copy(replica)
 
