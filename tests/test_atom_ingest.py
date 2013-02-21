@@ -4,7 +4,7 @@ from compare import expect
 import iso8601
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Experiment, Dataset, Dataset_File, \
-    Schema, User
+    Location, Schema, User
 from ..atom_ingest import AtomPersister, AtomWalker, \
     AtomImportSchemas, __file__ as atom_ingest_file
 import feedparser
@@ -25,10 +25,35 @@ class AbstractAtomServerTestCase(TestCase):
         os.chdir(os.path.dirname(__file__)+'/atom_test')
         cls.server = TestWebServer()
         cls.server.start()
-        pass
+
+        Location.force_initialize()
+        Location.objects.get_or_create(
+            name='test-atom',
+            migration_provider='http',
+            url='http://localhost:4272/files/',
+            type='external',
+            priority=10)
+        Location.objects.get_or_create(
+            name='test-atom2', 
+            migration_provider='http',
+            url='http://mydatagrabber.cmm.uq.edu.au/files',
+            type='external',
+            priority=10)
+
+        files = path.realpath(path.join(path.dirname(__file__), 
+                                        'atom_test', 'files'))
+        Location.objects.get_or_create(
+            name='test-atom3',
+            migration_provider='local',
+            url='file://' + files,
+            type='external',
+            priority=10)
 
     @classmethod
     def tearDownClass(cls):
+        Location.objects.get(name='test-atom').delete()
+        Location.objects.get(name='test-atom2').delete()
+        Location.objects.get(name='test-atom3').delete()
         os.chdir(cls.priorcwd)
         cls.server.stop()
 
@@ -63,7 +88,13 @@ class PersisterTestCase(AbstractAtomServerTestCase):
 
     def testPersisterCreatesDatafiles(self):
         feed, entry = self._getTestEntry()
-        p = AtomPersister()
+        # Frig the enclosure hrefs so that we can 'fetch' the files
+        # synchronously using 'file://' urls
+        dir = path.realpath(path.join(path.dirname(__file__), 
+                                      'atom_test', 'files') )
+        entry['links'][0]['href'] = 'file://' + path.join(dir, 'abcd0001.tif')
+        entry['links'][1]['href'] = 'file://' + path.join(dir, 'abcd0001.txt')
+        p = AtomPersister(async_copy=False)
         ok_(p.is_new(feed, entry), "Entry should not already be in DB")
         dataset = p.process(feed, entry)
         datafiles = dataset.dataset_file_set.all()
@@ -71,8 +102,9 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         image = dataset.dataset_file_set.get(filename='abcd0001.tif')
         # No mimetype specified, so should auto-detect
         eq_(image.mimetype, 'image/tiff')
-        ok_(urlparse(image.url).scheme == '', "Not local: %s" % image.url)
-        file_path = path.join(settings.MEDIA_ROOT, image.url)
+        image_url = image.get_preferred_replica().url
+        ok_(urlparse(image_url).scheme == '', "Not local: %s" % image_url)
+        file_path = path.join(settings.MEDIA_ROOT, image_url)
         ok_(path.isfile(file_path), "File does not exist: %s" % file_path)
         image = dataset.dataset_file_set.get(filename='metadata.txt')
         eq_(image.mimetype, 'text/plain')
@@ -177,8 +209,8 @@ class PersisterTestCase(AbstractAtomServerTestCase):
             eq_(p.is_new(feed, entry), False, "(processed => !new) != True")
 
 
-    def _getTestEntry(self):
-        doc = feedparser.parse('datasets.atom')
+    def _getTestEntry(self, atom_file='datasets.atom'):
+        doc = feedparser.parse(atom_file)
         entry = doc.entries.pop()
         # Check we're looking at the right entry
         assert entry.id.endswith('BEEFCAFE0001')

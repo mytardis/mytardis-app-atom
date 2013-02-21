@@ -62,6 +62,9 @@ class AtomPersister:
     PARAM_UPDATED = 'Updated'
     PARAM_EXPERIMENT_TITLE = 'ExperimentTitle'
 
+    def __init__(self, async_copy=True):
+        self.async_copy = async_copy;
+
 
     def is_new(self, feed, entry):
         '''
@@ -138,8 +141,16 @@ class AtomPersister:
         except AttributeError:
             pass
         datafile.save()
-        replica = Replica(datafile=datafile, url=enclosure.href,
-                          location=Location.get_default_location())
+        url = enclosure.href
+        # This means we will allow the atom feed to feed us any enclosure
+        # URL that matches a registered location.  Maybe we should restrict
+        # this to a specific location.
+        location = Location.get_location_for_url(url)
+        if not location:
+            logger.error('Rejected ingestion for unknown location %s' % url)
+
+        replica = Replica(datafile=datafile, url=url,
+                          location=location)
         replica.protocol = enclosure.href.partition('://')[0]
         replica.save()
         self.make_local_copy(replica)
@@ -147,7 +158,10 @@ class AtomPersister:
 
     def make_local_copy(self, replica):
         from tardis.tardis_portal.tasks import make_local_copy
-        make_local_copy.delay(replica.id)
+        if self.async_copy:
+            make_local_copy.delay(replica.id)
+        else:
+            make_local_copy(replica.id)
 
 
     def _get_experiment_details(self, entry, user):
