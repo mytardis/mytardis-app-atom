@@ -148,6 +148,7 @@ class AtomPersister:
         location = Location.get_location_for_url(url)
         if not location:
             logger.error('Rejected ingestion for unknown location %s' % url)
+            return
 
         replica = Replica(datafile=datafile, url=url,
                           location=location)
