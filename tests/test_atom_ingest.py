@@ -27,27 +27,27 @@ class AbstractAtomServerTestCase(TestCase):
         cls.server.start()
 
         Location.force_initialize()
-        Location.objects.get_or_create(
-            name='test-atom',
-            migration_provider='http',
-            url='http://localhost:4272/files/',
-            type='external',
-            priority=10)
-        Location.objects.get_or_create(
-            name='test-atom2', 
-            migration_provider='http',
-            url='http://mydatagrabber.cmm.uq.edu.au/files',
-            type='external',
-            priority=10)
+        Location.load_location({
+            'name': 'test-atom',
+            'transfer_provider': 'http',
+            'url': 'http://localhost:4272/files/',
+            'type': 'external',
+            'priority': 10})
+        Location.load_location({
+            'name': 'test-atom2', 
+            'transfer_provider': 'http',
+            'url': 'http://mydatagrabber.cmm.uq.edu.au/files',
+            'type': 'external',
+            'priority': 10})
 
         files = path.realpath(path.join(path.dirname(__file__), 
                                         'atom_test', 'files'))
-        Location.objects.get_or_create(
-            name='test-atom3',
-            migration_provider='local',
-            url='file://' + files,
-            type='external',
-            priority=10)
+        Location.load_location({
+            'name': 'test-atom3',
+            'transfer_provider': 'local',
+            'url': 'file://' + files,
+            'type': 'external',
+            'priority': 10})
 
     @classmethod
     def tearDownClass(cls):
@@ -175,9 +175,18 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         persister.should_receive('make_local_copy').times(8)
 
         doc = feedparser.parse('datasets2.atom')
-        # Process the first set of entries
-        for entry in reversed(doc.entries):
-            persister.process(doc.feed, entry)
+        save1 = settings.REQUIRE_DATAFILE_CHECKSUMS
+        save2 = settings.REQUIRE_DATAFILE_SIZES
+        try:
+            settings.REQUIRE_DATAFILE_CHECKSUMS = False
+            settings.REQUIRE_DATAFILE_SIZES = False
+            # Process the first set of entries
+            for entry in reversed(doc.entries):
+                persister.process(doc.feed, entry)
+        finally:
+            settings.REQUIRE_DATAFILE_CHECKSUMS = save1
+            settings.REQUIRE_DATAFILE_SIZES = save2
+            
         # We processed 4 datafiles
         eq_(Dataset_File.objects.count(), 4)
         # We processed 2 datasets
