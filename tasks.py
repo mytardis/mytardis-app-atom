@@ -3,7 +3,6 @@ from django.conf import settings
 from django.db import DatabaseError
 from tempfile import NamedTemporaryFile
 
-from tardis.tardis_portal.staging import stage_file
 from .atom_ingest import AtomWalker
 import urllib2, os
 
