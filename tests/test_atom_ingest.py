@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.test import TestCase
 from compare import expect
-import iso8601
+import iso8601, time
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Experiment, Dataset, Dataset_File, \
     Location, Schema, User
@@ -87,6 +87,7 @@ class PersisterTestCase(AbstractAtomServerTestCase):
 
 
     def testPersisterCreatesDatafiles(self):
+        start_time = time.time()
         feed, entry = self._getTestEntry()
         # Frig the enclosure hrefs so that we can 'fetch' the files
         # synchronously using 'file://' urls
@@ -104,8 +105,10 @@ class PersisterTestCase(AbstractAtomServerTestCase):
         eq_(image.mimetype, 'image/tiff')
         image_url = image.get_preferred_replica().url
         ok_(urlparse(image_url).scheme == '', "Not local: %s" % image_url)
-        file_path = path.join(settings.MEDIA_ROOT, image_url)
+        file_path = path.join(settings.FILE_STORE_PATH, image_url)
         ok_(path.isfile(file_path), "File does not exist: %s" % file_path)
+        ok_(path.getmtime(file_path) >= start_time,  
+            "File not updated: %s" % file_path)
         image = dataset.dataset_file_set.get(filename='metadata.txt')
         eq_(image.mimetype, 'text/plain')
 
