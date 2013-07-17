@@ -5,7 +5,7 @@ from tardis.tardis_portal.auth.localdb_auth import django_user
 from tardis.tardis_portal.fetcher import get_credential_handler
 from tardis.tardis_portal.ParameterSetManager import ParameterSetManager
 from tardis.tardis_portal.models import Dataset, DatasetParameter, \
-    Experiment, ExperimentACL, ExperimentParameter, ParameterName, Schema, \
+    Experiment, ObjectACL, ExperimentParameter, ParameterName, Schema, \
     Dataset_File, User, UserProfile, Replica, Location
 from django.db import transaction
 from django.conf import settings
@@ -204,14 +204,14 @@ class AtomPersister:
                                     public_access=public_access)
             experiment.save()
             self._create_experiment_id_parameter_set(experiment, experimentId)
-            acl = ExperimentACL(experiment=experiment,
+            acl = ObjectACL(content_object=experiment,
                     pluginId=django_user,
                     entityId=user.id,
                     canRead=True,
                     canWrite=True,
                     canDelete=True,
                     isOwner=True,
-                    aclOwnershipType=ExperimentACL.OWNER_OWNED)
+                    aclOwnershipType=ObjectACL.OWNER_OWNED)
             acl.save()
             return experiment
 
